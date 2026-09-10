@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Track Your Order</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;box-sizing:border-box}
+  body{font-family:'Jost',Helvetica,Arial,sans-serif;background:#f7f5f3;min-height:100vh;padding:20px 16px;color:#1a1a1a}
+  .page{max-width:580px;margin:0 auto}
+  .logo{text-align:center;margin-bottom:24px}
+  .logo a{font-size:22px;font-weight:900;color:#C9971C;text-decoration:none;letter-spacing:-.5px}
+  .logo p{font-size:12px;color:#aaa;margin-top:4px}
+  .card{background:#fff;border-radius:16px;padding:24px;box-shadow:0 2px 24px rgba(0,0,0,.07)}
+  h1{font-size:18px;font-weight:800;color:#1a1a1a;margin-bottom:6px}
+  .sub{font-size:13px;color:#888;margin-bottom:24px;line-height:1.6}
+  label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#aaa;margin-bottom:6px}
+  input{width:100%;border:1.5px solid #e5e7eb;border-radius:12px;padding:12px 14px;font-size:16px;font-family:inherit;outline:none;transition:border-color .2s}
+  input:focus{border-color:#C9971C}
+  .or{text-align:center;font-size:12px;color:#ccc;margin:14px 0;position:relative}
+  .or::before,.or::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:#eee}
+  .or::before{left:0}.or::after{right:0}
+  button{width:100%;background:linear-gradient(90deg,#C9971C,#A67C15);color:#fff;border:none;border-radius:12px;padding:15px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:20px;transition:opacity .2s;-webkit-tap-highlight-color:transparent}
+  button:active{opacity:.85}button:disabled{opacity:.6;cursor:not-allowed}
+  .error{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:10px;padding:12px 16px;font-size:13px;margin-top:16px;display:none}
+  .results{margin-top:24px;display:none}
+  .order-card{border:1px solid #f0f0f0;border-radius:14px;padding:16px;margin-bottom:14px}
+  .order-header{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  .order-num{font-size:15px;font-weight:800;color:#C9971C}
+  .order-date{font-size:11px;color:#aaa;margin-top:2px}
+  .status-badge{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;white-space:nowrap}
+  .s-Pending{background:#fef9c3;color:#a16207}
+  .s-Processing{background:#dbeafe;color:#1d4ed8}
+  .s-Shipped{background:#f3e8ff;color:#7e22ce}
+  .s-Delivered{background:#dcfce7;color:#15803d}
+  .s-Returned{background:#fee2e2;color:#dc2626}
+  .s-Refunded{background:#ffe4e6;color:#be123c}
+  .timeline{display:flex;gap:0;margin-bottom:14px;overflow:hidden;border-radius:8px}
+  .tl-step{flex:1;padding:7px 2px;text-align:center;font-size:9px;font-weight:700;background:#f3f4f6;color:#9ca3af}
+  .tl-step.done{background:#C9971C;color:#fff}
+  .tl-step.active{background:#fdf6f0;color:#C9971C;border:1.5px solid #C9971C}
+  .items-list{font-size:13px;color:#555;margin-bottom:12px}
+  .item-row{padding:7px 0;border-bottom:1px solid #f5f5f5;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .item-row span:first-child{flex:1;word-break:break-word}
+  .item-row span:last-child{white-space:nowrap;font-weight:600;color:#1a1a1a;flex-shrink:0}
+  .item-row:last-child{border-bottom:none}
+  .delivery-box{background:#fdf6f0;border-left:3px solid #C9971C;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:12px;font-size:13px;line-height:1.7}
+  .delivery-box a{color:#C9971C;font-weight:700;word-break:break-all}
+  .receipt-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:13px;color:#C9971C;text-decoration:none;font-weight:600;padding:8px 16px;background:#fdf6f0;border-radius:8px;border:1px solid #fbd9c6}
+  .back{text-align:center;margin-top:20px;font-size:13px;color:#888}
+  .back a{color:#C9971C;font-weight:600;text-decoration:none}
+  @media(min-width:480px){.card{padding:32px}.order-card{padding:20px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="logo">
+    <a href="/">Freeman Outlet</a>
+    <p>Track your order status</p>
+  </div>
+  <div class="card">
+    <h1>Where is my order?</h1>
+    <p class="sub">Enter the phone number you ordered with to see all your orders, or paste your order reference or email if you have it.</p>
+    <div>
+      <label>Phone number</label>
+      <input type="tel" id="track-phone" placeholder="0244 123 456" onkeydown="if(event.key==='Enter')trackOrders()">
+    </div>
+    <div class="or">or</div>
+    <div>
+      <label>Order reference / ID</label>
+      <input type="text" id="track-ref" placeholder="ORD-1234567890 or your order number" onkeydown="if(event.key==='Enter')trackOrders()">
+    </div>
+    <div class="or">or</div>
+    <div>
+      <label>Email address</label>
+      <input type="email" id="track-email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')trackOrders()">
+    </div>
+    <button onclick="trackOrders()" id="track-btn">Track Order →</button>
+    <div class="error" id="track-error"></div>
+    <div class="results" id="track-results"></div>
+  </div>
+  <div class="back"><a href="/">← Back to shop</a></div>
+</div>
+
+<script>
+function escHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function safeHttpUrl(s){ s=String(s||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
+const STEPS = ['Pending','Processing','Shipped','Delivered'];
+function stepIndex(s){ return STEPS.indexOf(s); }
+function timeline(status){
+  return STEPS.map((s,i)=>{
+    const idx = stepIndex(status);
+    const cls = i<idx?'done':i===idx?'active':'';
+    return `<div class="tl-step ${cls}">${s}</div>`;
+  }).join('');
+}
+async function trackOrders(){
+  const phone=(document.getElementById('track-phone').value||'').trim();
+  const email=(document.getElementById('track-email').value||'').trim();
+  const ref=(document.getElementById('track-ref').value||'').trim();
+  const err=document.getElementById('track-error');
+  const res=document.getElementById('track-results');
+  const btn=document.getElementById('track-btn');
+  err.style.display='none'; res.style.display='none';
+  if(!phone&&!email&&!ref){err.textContent='Please enter your phone number, email or order reference.';err.style.display='block';return;}
+  btn.disabled=true;btn.textContent='Searching…';
+  try{
+    const params = ref ? 'ref='+encodeURIComponent(ref) : phone ? 'phone='+encodeURIComponent(phone) : 'email='+encodeURIComponent(email);
+    const url='/api/track?'+params;
+    const data=await fetch(url).then(r=>r.json());
+    if(!data.success){err.textContent=data.message||'No orders found.';err.style.display='block';btn.disabled=false;btn.textContent='Track Order →';return;}
+    res.innerHTML=data.orders.map(o=>{
+      const date=new Date(o.paidAt).toLocaleString('en-GH',{dateStyle:'medium',timeStyle:'short'});
+      const statusClass='s-'+(o.status||'Pending').replace(/\s/g,'-');
+      const items=(o.items||[]).map(i=>`<div class="item-row"><span>${escHtml(i.name)}${i.color?' — '+escHtml(i.color):''}${i.size?' / '+escHtml(i.size):''} ×${escHtml(i.quantity)}</span><span>GH₵${(parseFloat(i.price||0)*parseInt(i.quantity||1)).toFixed(2)}</span></div>`).join('');
+      const shipping=(o.shippingCarrier||o.shippingRiderPhone||o.shippingTrackingLink)?`<div class="delivery-box">
+        <strong>Delivery details</strong><br>
+        ${o.shippingCarrier?`Carrier: ${escHtml(o.shippingCarrier)}<br>`:''}
+        ${o.shippingRiderPhone?`Rider phone: <a href="tel:${encodeURIComponent(o.shippingRiderPhone)}">${escHtml(o.shippingRiderPhone)}</a><br>`:''}
+        ${safeHttpUrl(o.shippingTrackingLink)?`<a href="${escHtml(safeHttpUrl(o.shippingTrackingLink))}" target="_blank" rel="noopener noreferrer">Track your delivery →</a>`:''}
+        ${o.shippingNote?`<br><em>${escHtml(o.shippingNote)}</em>`:''}
+      </div>`:'';
+      // When searching by reference alone, neither phone nor email was typed in —
+      // fall back to the phone the server returned for this order so the receipt
+      // link still works (that lookup already reveals strictly more than a phone number).
+      const contactParam=phone?`?phone=${encodeURIComponent(phone)}`:email?`?email=${encodeURIComponent(email)}`:o.customerPhone?`?phone=${encodeURIComponent(o.customerPhone)}`:'';
+      return `<div class="order-card">
+        <div class="order-header">
+          <div><div class="order-num">${o.orderNo?'#'+escHtml(o.orderNo):escHtml(o.id)}</div><div class="order-date">${escHtml(date)}</div></div>
+          <span class="status-badge ${statusClass}">${escHtml(o.status||'Pending')}</span>
+        </div>
+        <div class="timeline">${timeline(o.status||'Pending')}</div>
+        <div class="items-list">${items}</div>
+        <div style="font-size:13px;font-weight:700;color:#1a1a1a;text-align:right">Total: GH₵${parseFloat(o.total||0).toFixed(2)}</div>
+        ${shipping}
+        <a href="/api/orders/${encodeURIComponent(o.id)}/receipt${contactParam}" target="_blank" class="receipt-link">🧾 Download Receipt</a>
+      </div>`;
+    }).join('');
+    res.style.display='block';
+  }catch(e){err.textContent='Something went wrong. Please try again.';err.style.display='block';}
+  btn.disabled=false;btn.textContent='Track Order →';
+}
+</script>
+</body>
+</html>

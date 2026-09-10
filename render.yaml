@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: freeman-outlet
+    runtime: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data
+      # Was /var/uploads — that path is NOT on the mounted disk below, so every
+      # deploy/restart wiped all product images while the persistent product
+      # records kept pointing at the now-missing files. Uploads must live under
+      # the same persistent disk as the rest of the data.
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: GMAIL_USER
+        sync: false
+      - key: GMAIL_PASS
+        sync: false
+      - key: STORE_EMAIL
+        sync: false
+      - key: ADMIN_USER
+        sync: false
+      - key: ADMIN_PASS
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_JWT_SECRET
+        sync: false
+    disk:
+      name: freeman-data
+      mountPath: /var/data
+      sizeGB: 1

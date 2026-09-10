@@ -1,0 +1,945 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Freeman Outlet – Everyday Basics At Outlet Prices</title>
+  <meta name="description" content="Freeman Outlet, Ghana — Shop genuine Fruit of the Loom undershirts, boxers, unisex socks & ladies' panties at outlet prices. Delivered anywhere in Ghana."/>
+  <meta property="og:title" content="Freeman Outlet — Everyday Basics At Outlet Prices"/>
+  <meta property="og:description" content="Shop genuine Fruit of the Loom undershirts, boxers, unisex socks & ladies' panties at outlet prices. Delivered anywhere in Ghana."/>
+  <meta property="og:image" content="/assets/images/hero.jpg"/>
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <meta property="og:type" content="website"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link rel="icon" href="/assets/images/logo.png" type="image/png"/>
+  <link rel="apple-touch-icon" href="/assets/images/logo.png"/>
+  <!-- Preload hero image — it's the LCP element -->
+  <link rel="preload" as="image" href="/assets/images/hero.jpg">
+  <!-- Resource hints — load critical origins early -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+  <link rel="dns-prefetch" href="https://images.unsplash.com">
+  <!-- Fonts — only the weights we actually use -->
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <!-- Critical CSS first, scripts deferred -->
+  <link rel="stylesheet" href="/styles/main.css">
+  <script src="https://code.iconify.design/iconify-icon/1.0.8/iconify-icon.min.js" async></script>
+</head>
+<body>
+
+<!-- ── INTRO SPLASH ── -->
+<div id="splash-screen" style="
+  position:fixed;inset:0;z-index:99999;
+  background:#1a1a1a;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  transition:opacity .8s ease, visibility .8s ease;
+">
+  <style>
+    @keyframes splash-line { from{width:0} to{width:100%} }
+    @keyframes splash-fade { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes splash-pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+    @keyframes splash-shimmer {
+      0%{background-position:-200% center}
+      100%{background-position:200% center}
+    }
+    #splash-wordmark {
+      font-family:'Oswald',Arial,sans-serif;
+      font-size:clamp(42px,10vw,72px);
+      font-weight:600;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      color:#fff;
+      opacity:0;
+      animation:splash-fade .9s ease .2s forwards;
+      background:linear-gradient(90deg,#fff 30%,var(--accent) 50%,#fff 70%);
+      background-size:200% auto;
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+      background-clip:text;
+      animation:splash-fade .9s ease .2s forwards, splash-shimmer 3s linear 1.2s infinite;
+    }
+    #splash-tagline {
+      font-family:'Work Sans',sans-serif;
+      font-size:clamp(11px,3vw,14px);
+      font-weight:400;
+      letter-spacing:.35em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.55);
+      margin-top:12px;
+      opacity:0;
+      animation:splash-fade .7s ease .7s forwards;
+    }
+    #splash-bar-wrap {
+      width:120px;height:1px;
+      background:rgba(255,255,255,.12);
+      margin-top:36px;
+      overflow:hidden;
+      opacity:0;
+      animation:splash-fade .5s ease 1s forwards;
+    }
+    #splash-bar {
+      height:100%;background:var(--accent);
+      width:0;
+      animation:splash-line 2.5s cubic-bezier(.4,0,.2,1) 1.2s forwards;
+    }
+    #splash-flag {
+      margin-top:20px;
+      display:flex;align-items:center;gap:6px;
+      opacity:0;
+      animation:splash-fade .5s ease 1.4s forwards;
+    }
+    #splash-flag span {
+      font-family:'Work Sans',sans-serif;
+      font-size:10px;
+      letter-spacing:.2em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.3);
+    }
+    .splash-dot {
+      width:4px;height:4px;border-radius:50%;background:var(--accent);
+      animation:splash-pulse 1.4s ease infinite;
+    }
+    .splash-dot:nth-child(2){animation-delay:.2s}
+    .splash-dot:nth-child(3){animation-delay:.4s}
+  </style>
+
+  <p id="splash-wordmark">Freeman Outlet</p>
+  <p id="splash-tagline">Everyday Basics At Outlet Prices</p>
+  <div id="splash-bar-wrap"><div id="splash-bar"></div></div>
+  <div id="splash-flag">
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <div class="splash-dot"></div>
+    <span>Ghana</span>
+  </div>
+</div>
+
+<!-- FLASH SALE BAR -->
+<div id="flash-sale-bar" class="flash-sale-bar">
+  <span id="flash-sale-msg">Flash Sale ends in</span>
+  <span class="fs-countdown" id="flash-countdown">00:00:00</span>
+</div>
+
+<!-- ANNOUNCEMENT BANNER -->
+<div id="announce-bar" class="announce" style="display:none">
+  <span id="announce-text"><strong>Nationwide delivery</strong> across Ghana</span>
+</div>
+
+<!-- NAV -->
+<nav>
+  <div class="wrap nav-i">
+    <a href="/">
+      <img src="/assets/images/logo.png" alt="Freeman Outlet" class="logo-img" width="200" height="52"
+        onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='block'"/>
+      <div class="logo-text" id="logo-fallback" style="display:none"><span class="l1">Freeman</span> Outlet</div>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#products">Shop</a></li>
+      <li><a href="/track">Track Order</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+    <div class="nav-right">
+      <div class="nav-search">
+        <input type="text" id="nav-search-input" placeholder="Search products…" autocomplete="off"
+          oninput="navSearch(this.value)"/>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="15" height="15">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z"/>
+        </svg>
+      </div>
+      <button class="acct-nav-btn" id="acct-nav-btn" onclick="openAccountModal()" aria-label="My Account" title="My Account">
+        <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        <span class="acct-nav-name" id="acct-nav-name" style="display:none"></span>
+      </button>
+      <button class="wish-nav-btn" onclick="openWishlist()" aria-label="Saved items" title="Wishlist">
+        ♡
+        <span class="wish-count hidden" id="wish-count">0</span>
+      </button>
+      <button class="cart-btn" onclick="openCart()" aria-label="View cart">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <span class="cart-label">Cart</span>
+        <span class="cart-count hidden" id="cart-count">0</span>
+      </button>
+      <button class="btn-n" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shop Now</button>
+      <button class="hamburger" id="hamburger" onclick="toggleMobileNav()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<!-- MOBILE NAV -->
+<div class="mobile-nav" id="mobile-nav">
+  <a href="#products" onclick="closeMobileNav()">Shop</a>
+  <a href="/track" onclick="closeMobileNav()">Track My Order</a>
+  <a href="#contact" onclick="closeMobileNav()">Contact</a>
+  <a href="https://wa.me/" target="_blank" id="mn-wa">WhatsApp Us</a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <!-- Slides -->
+  <div class="hero-slides">
+    <div class="hero-slide active" style="background-image:url('/assets/images/hero.jpg')">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-slide" style="background-image:url('/assets/images/gallery/photo1.jpg')">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-slide" style="background-image:url('/assets/images/gallery/photo2.jpg')">
+      <div class="hero-overlay"></div>
+    </div>
+    <div class="hero-slide hero-video-slide" id="hero-video-slide" style="display:none">
+      <video id="hero-video-el" autoplay muted loop playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></video>
+      <div class="hero-overlay"></div>
+    </div>
+  </div>
+
+  <!-- Centered content -->
+  <div class="hero-content">
+    <div class="hero-pill" id="hero-pill">Freeman Outlet · Ghana</div>
+    <h1 id="hero-headline">Everyday Basics <span>Built To Last</span><br>At Outlet Prices</h1>
+    <p class="hero-sub" id="hero-sub">Fruit of the Loom undershirts, boxers, unisex socks &amp; ladies' panties — genuine stock, honest prices, delivered anywhere in Ghana.</p>
+    <div class="hero-btns">
+      <button class="hero-btn-p" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shop Now </button>
+      <a href="https://wa.me/" target="_blank" rel="noopener" class="hero-btn-o" id="hero-wa-btn">Contact Us</a>
+    </div>
+  </div>
+
+  <!-- Slide dots -->
+  <div class="hero-dots" id="hero-dots">
+    <button class="hero-dot active" onclick="heroGoTo(0)"></button>
+    <button class="hero-dot" onclick="heroGoTo(1)"></button>
+    <button class="hero-dot" onclick="heroGoTo(2)"></button>
+    <button class="hero-dot" id="hero-dot-3" onclick="heroGoTo(3)" style="display:none"></button>
+  </div>
+
+  <input type="text" id="search-bar" style="display:none" readonly/>
+</section>
+
+<!-- NEW ARRIVALS -->
+<section class="new-arrivals" id="new-arrivals" style="display:none">
+  <div class="wrap">
+    <div class="arrivals-hd">
+      <div class="arrivals-hd-left">
+        <p class="arrivals-eyebrow">Just Landed</p>
+        <h2>New Arrivals</h2>
+      </div>
+      <div class="arrivals-nav">
+        <button id="arr-prev" aria-label="Scroll left" onclick="arrivalsScroll(-1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button id="arr-next" aria-label="Scroll right" onclick="arrivalsScroll(1)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="arrivals-track-wrap">
+      <div id="new-arrivals-grid" class="arrivals-track"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORY CARDS -->
+<section class="cat-section" id="cat-section">
+  <div class="wrap">
+    <div class="cat-sec-hd">
+      <div>
+        <p class="cat-eyebrow">Shop by Category</p>
+        <h2>Find your perfect style</h2>
+      </div>
+      <button class="cat-see-all" onclick="setCategoryFilter('all');document.getElementById('products').scrollIntoView({behavior:'smooth',block:'start'})">Browse all &rarr;</button>
+    </div>
+    <div id="cat-cards" class="cat-cards-grid"></div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="products" id="products">
+  <div class="wrap">
+    <div class="filter-bar" style="margin-top:0">
+      <div class="search-row" style="max-width:100%;display:none" id="mobile-search-row">
+        <input type="text" id="mobile-search-bar" oninput="mobileSearch(this.value)" placeholder="Search products…" style="width:100%"/>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z"/>
+        </svg>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div class="filter-row" style="margin:0">
+          <button onclick="setStatusFilter('all')" id="filter-all" class="f-btn active">All</button>
+          <button onclick="setStatusFilter('instock')" id="filter-instock" class="f-btn">In Stock</button>
+          <button onclick="setStatusFilter('soldout')" id="filter-soldout" class="f-btn">Sold Out</button>
+        </div>
+        <select onchange="setSort(this.value)" style="border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;font-family:var(--fb);font-size:12px;font-weight:600;color:var(--dark);background:#fff;cursor:pointer;outline:none">
+          <option value="default">Sort: Default</option>
+          <option value="newest">Newest first</option>
+          <option value="price-asc">Price: Low → High</option>
+          <option value="price-desc">Price: High → Low</option>
+          <option value="name-asc">Name A–Z</option>
+        </select>
+      </div>
+      <div class="filter-row" id="cat-filters" style="display:none"></div>
+      <div class="filter-row" id="size-filters"></div>
+    </div>
+    <div id="shop-grid" class="prod-g"></div>
+  </div>
+</section>
+
+<!-- FEATURED COLLECTION BANNER -->
+<section class="feat-banner" id="feat-banner">
+  <div class="feat-banner-img" id="feat-banner-img" style="background-image:url('/assets/images/banner.jpg')"></div>
+  <div class="feat-banner-overlay"></div>
+  <div class="feat-banner-content">
+    <p class="feat-banner-eyebrow">Featured Collection</p>
+    <h2 class="feat-banner-headline" id="feat-banner-headline">The New Collection</h2>
+    <p class="feat-banner-sub" id="feat-banner-sub">Explore our latest arrivals — bold styles curated for you.</p>
+    <a class="feat-banner-cta" id="feat-banner-cta" href="#products">Shop Now</a>
+  </div>
+</section>
+
+<!-- RECENTLY VIEWED -->
+<section class="rv-section" id="rv-section">
+  <div class="wrap">
+    <div class="cat-sec-hd">
+      <div>
+        <p class="cat-eyebrow">Continue Browsing</p>
+        <h2 style="font-family:var(--fh);font-size:38px;font-weight:300;letter-spacing:.02em;line-height:1.1;margin:0">Recently Viewed</h2>
+      </div>
+    </div>
+    <div class="rv-track" id="rv-track"></div>
+  </div>
+</section>
+
+<!-- BRAND VIDEO -->
+<section class="brand-video-sec" id="brand-video-sec">
+  <div class="wrap">
+    <div class="brand-video-inner">
+      <div class="brand-video-thumb" id="brand-video-thumb" onclick="openVideoModal()">
+        <img id="brand-video-thumb-img" src="" alt="Watch our story" onerror="this.style.display='none'"/>
+        <div class="brand-video-play">
+          <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="40" cy="40" r="38" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.5)" stroke-width="2"/>
+            <polygon points="32,24 60,40 32,56" fill="#fff"/>
+          </svg>
+        </div>
+      </div>
+      <div class="brand-video-text">
+        <p class="cat-eyebrow">Watch &amp; Learn</p>
+        <h2 id="brand-video-title">Our <span>Brand Story</span></h2>
+        <p id="brand-video-body">Discover the people, passion, and purpose behind Freeman Outlet — and see how we bring quality basics and everyday comfort to your door.</p>
+        <button id="brand-video-watch-btn" onclick="openVideoModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Watch the Video
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── BRAND VIDEO MODAL ── -->
+<div id="video-modal-overlay" onclick="if(event.target===this)closeVideoModal()">
+  <div class="video-modal-inner">
+    <button class="video-modal-close" onclick="closeVideoModal()" aria-label="Close video">✕</button>
+    <iframe id="video-modal-frame" src="" title="Brand story video" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- DELIVERY & RETURNS -->
+<section class="delivery" id="delivery">
+  <div class="wrap">
+    <div class="sec-hd reveal">
+      <p class="cat-eyebrow" style="margin-bottom:10px">Shipping & Returns</p>
+      <h2>Delivery & Returns</h2>
+      <p>We deliver nationwide across Ghana. Here's everything you need to know.</p>
+    </div>
+    <div class="del-g reveal-group">
+      <div class="del-card reveal">
+        <h3>Delivery</h3>
+        <div class="del-row"><span>Accra (within city)</span><span>1–2 business days · Free on orders over GH₵200</span></div>
+        <div class="del-row"><span>Greater Accra (suburbs)</span><span>1–3 business days</span></div>
+        <div class="del-row"><span>Other regions</span><span>3–5 business days</span></div>
+        <div class="del-row"><span>Delivery fee</span><span>Confirmed via WhatsApp</span></div>
+        <div class="del-row"><span>Order tracking</span><span>WhatsApp updates after dispatch</span></div>
+      </div>
+      <div class="del-card reveal">
+        <h3>Returns & Exchanges</h3>
+        <div class="del-row"><span>Return window</span><span>48 hours from delivery</span></div>
+        <div class="del-row"><span>Condition</span><span>Unworn, tags intact, original packaging</span></div>
+        <div class="del-row"><span>Exchange</span><span>Different size or colour — subject to availability</span></div>
+        <div class="del-row"><span>Refunds</span><span>Store credit or mobile money refund</span></div>
+        <div class="del-row"><span>How to start</span><span>WhatsApp us within 48 hrs of receiving</span></div>
+        <div class="return-note">To initiate a return, message us on WhatsApp with your order reference and photos of the item. We'll guide you through the process.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="wrap">
+    <div class="sec-hd reveal">
+      <p class="cat-eyebrow" style="margin-bottom:10px">Support</p>
+      <h2>Frequently Asked Questions</h2>
+      <p>Quick answers to the questions we hear most.</p>
+    </div>
+    <div class="faq-list" id="faq-list"></div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testi">
+  <div class="wrap">
+    <div class="sec-hd reveal">
+      <p class="cat-eyebrow" style="margin-bottom:10px">Customer Reviews</p>
+      <h2>What Our Customers Say</h2>
+      <p>Real feedback from happy customers across Ghana.</p>
+    </div>
+    <div class="testi-g" id="reviews-grid"></div>
+    <div class="testi-cta">
+      <button class="btn-n" onclick="openReviewModal()" style="margin-top:8px">Leave a Review</button>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST STRIP -->
+<div class="trust-strip">
+  <span><iconify-icon icon="lucide:truck" width="18" height="18"></iconify-icon> <span id="trust-1"><strong>Nationwide delivery</strong> across Ghana</span></span>
+  <span><iconify-icon icon="lucide:badge-check" width="18" height="18"></iconify-icon> <span id="trust-2">Free delivery in <strong>Accra</strong> on orders over <strong>GH₵200</strong></span></span>
+  <span><iconify-icon icon="logos:whatsapp-icon" width="18" height="18"></iconify-icon> <span id="trust-3"><strong>No online payment</strong> — order via WhatsApp</span></span>
+  <span><iconify-icon icon="lucide:message-circle" width="18" height="18"></iconify-icon> <span id="trust-4"><strong>Fast replies</strong> on WhatsApp</span></span>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+
+      <!-- Brand -->
+      <div>
+        <div class="foot-logo" id="foot-logo-text">Freeman Outlet</div>
+        <p class="foot-tagline" id="foot-tagline">Everyday Basics. Built To Last. Outlet Prices.</p>
+        <div class="foot-socials">
+          <a href="#" target="_blank" class="foot-soc-btn" title="Instagram" id="foot-ig">
+            <iconify-icon icon="simple-icons:instagram" width="16" height="16"></iconify-icon>
+          </a>
+          <a href="#" target="_blank" class="foot-soc-btn" title="Facebook" id="foot-fb">
+            <iconify-icon icon="simple-icons:facebook" width="16" height="16"></iconify-icon>
+          </a>
+          <a href="#" target="_blank" class="foot-soc-btn" title="TikTok" id="foot-tt">
+            <iconify-icon icon="simple-icons:tiktok" width="16" height="16"></iconify-icon>
+          </a>
+          <a href="#" target="_blank" class="foot-soc-btn" title="Snapchat" id="foot-sc">
+            <iconify-icon icon="simple-icons:snapchat" width="16" height="16"></iconify-icon>
+          </a>
+          <a href="https://wa.me/" target="_blank" class="foot-soc-btn" title="WhatsApp" id="foot-wa">
+            <iconify-icon icon="simple-icons:whatsapp" width="16" height="16"></iconify-icon>
+          </a>
+        </div>
+        <div class="foot-contact">
+          <div class="foot-contact-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+            <a href="tel:+" id="foot-phone"></a>
+          </div>
+          <div class="foot-contact-item">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+            <a href="mailto:" id="foot-email"></a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Shop -->
+      <div>
+        <h3 class="foot-col-title">Shop</h3>
+        <ul class="foot-col-links" id="foot-shop-links">
+          <li><a href="#products" onclick="setCategoryFilter('all');document.getElementById('products').scrollIntoView({behavior:'smooth'})">All Products</a></li>
+        </ul>
+      </div>
+
+      <!-- Customer Care -->
+      <div>
+        <h3 class="foot-col-title">Customer Care</h3>
+        <ul class="foot-col-links">
+          <li><a href="https://wa.me/" target="_blank" id="foot-cc-wa">Contact Us</a></li>
+          <li><a href="#" onclick="openSizeGuide('');return false">Size Guide</a></li>
+          <li><a href="/track">Track My Order</a></li>
+          <li><a href="mailto:" id="foot-cc-email">Email Us</a></li>
+        </ul>
+      </div>
+
+      <!-- Company -->
+      <div>
+        <h3 class="foot-col-title">Company</h3>
+        <ul class="foot-col-links">
+          <li><a href="https://wa.me/" target="_blank" id="foot-contact-wa">Contact Us</a></li>
+          <li><a href="#" target="_blank" id="foot-co-ig">Instagram</a></li>
+          <li><a href="#" target="_blank" id="foot-co-fb">Facebook</a></li>
+          <li><a href="#" target="_blank" id="foot-co-tt">TikTok</a></li>
+          <li><a href="#" target="_blank" id="foot-co-sc">Snapchat</a></li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+  <hr class="foot-divider">
+  <div class="wrap">
+    <p class="foot-copy">2026 Freeman Outlet · All rights reserved · Everyday Basics, Built To Last · <a href="/admin.html">Admin</a></p>
+    <div style="text-align:center;padding:10px 0 18px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;color:rgba(255,255,255,.22);font-family:var(--fb);letter-spacing:.06em">Crafted with care by</span>
+      <img src="/assets/images/bibinilinks.png.png" alt="Bibini Links" style="height:28px;width:auto;opacity:.55;filter:brightness(10);transition:opacity .2s" onmouseover="this.style.opacity='.9'" onmouseout="this.style.opacity='.55'"/>
+    </div>
+  </div>
+</footer>
+
+<!-- REVIEW MODAL -->
+<div class="modal-overlay" id="review-modal" onclick="if(event.target===this)closeReviewModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Leave a Review</h3>
+      <button class="modal-close" onclick="closeReviewModal()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body" id="review-modal-body">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:20px">Loved your order? Share your experience — it helps other customers and means the world to us!</p>
+      <div class="form-group">
+        <label>Your Rating *</label>
+        <div class="star-row" id="star-row">
+          <span class="star-opt" data-v="1">★</span>
+          <span class="star-opt" data-v="2">★</span>
+          <span class="star-opt" data-v="3">★</span>
+          <span class="star-opt" data-v="4">★</span>
+          <span class="star-opt" data-v="5">★</span>
+        </div>
+      </div>
+      <div class="form-grid2">
+        <div class="form-group">
+          <label>Your Name *</label>
+          <input type="text" id="rev-name" placeholder="Ama Asante"/>
+        </div>
+        <div class="form-group">
+          <label>Location <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+          <input type="text" id="rev-location" placeholder="Accra, Ghana"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Order Email or Phone * <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">— must match the email or phone you ordered with</span></label>
+        <input type="text" id="rev-email" placeholder="you@example.com or 0244 123 456"/>
+      </div>
+      <div class="form-group">
+        <label>Your Review *</label>
+        <textarea id="rev-message" rows="4" placeholder="Tell us about your experience with the product and delivery…"></textarea>
+      </div>
+      <button class="btn-pay" onclick="submitReview()">
+        Submit Review
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- WISHLIST OVERLAY + SIDEBAR -->
+<div class="wish-overlay" id="wish-overlay" onclick="closeWishlist()"></div>
+<div class="wish-sidebar" id="wish-sidebar">
+  <div class="cart-head">
+    <h3>Saved Items</h3>
+    <button class="cart-close" onclick="closeWishlist()" aria-label="Close">✕</button>
+  </div>
+  <div class="cart-body" id="wish-body"></div>
+</div>
+
+<!-- SIZE GUIDE MODAL -->
+<div id="sg-overlay" onclick="if(event.target===this)closeSizeGuide()">
+  <div class="sg-modal">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px">
+      <div>
+        <h3>Size Guide</h3>
+        <p class="sg-sub">Measurements in centimetres (cm). Sizes may vary slightly by style — when in doubt, size up.</p>
+      </div>
+      <button onclick="closeSizeGuide()" aria-label="Close" style="flex-shrink:0;background:var(--light);border:1px solid var(--border);border-radius:50%;width:44px;height:44px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+    </div>
+    <div id="sg-clothing">
+      <span class="sg-section">Undershirts &amp; Vests — Chest (cm)</span>
+      <table class="sg-table">
+        <thead><tr><th>Size</th><th>Chest (cm)</th></tr></thead>
+        <tbody>
+          <tr><td><b>XS</b></td><td>76 – 83</td></tr>
+          <tr><td><b>S</b></td><td>84 – 91</td></tr>
+          <tr><td><b>M</b></td><td>92 – 99</td></tr>
+          <tr><td><b>L</b></td><td>100 – 107</td></tr>
+          <tr><td><b>XL</b></td><td>108 – 115</td></tr>
+          <tr><td><b>XXL</b></td><td>116 – 124</td></tr>
+          <tr><td><b>XXXL</b></td><td>125 – 132</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="sg-underwear" style="display:none">
+      <span class="sg-section">Underwear &amp; Boxers — Waist (cm)</span>
+      <table class="sg-table">
+        <thead><tr><th>Size</th><th>Waist (cm)</th></tr></thead>
+        <tbody>
+          <tr><td><b>XS</b></td><td>61 – 66</td></tr>
+          <tr><td><b>S</b></td><td>71 – 76</td></tr>
+          <tr><td><b>M</b></td><td>81 – 86</td></tr>
+          <tr><td><b>L</b></td><td>91 – 96</td></tr>
+          <tr><td><b>XL</b></td><td>101 – 106</td></tr>
+          <tr><td><b>XXL</b></td><td>111 – 116</td></tr>
+          <tr><td><b>XXXL</b></td><td>121 – 126</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px">Measure around your natural waistline. Between sizes? Size up for comfort.</p>
+    </div>
+    <div id="sg-panties" style="display:none">
+      <span class="sg-section">Ladies' Panties — Hip (cm)</span>
+      <table class="sg-table">
+        <thead><tr><th>Size</th><th>Hip (cm)</th></tr></thead>
+        <tbody>
+          <tr><td><b>XS</b></td><td>80 – 85</td></tr>
+          <tr><td><b>S</b></td><td>86 – 91</td></tr>
+          <tr><td><b>M</b></td><td>92 – 97</td></tr>
+          <tr><td><b>L</b></td><td>98 – 103</td></tr>
+          <tr><td><b>XL</b></td><td>104 – 109</td></tr>
+          <tr><td><b>XXL</b></td><td>110 – 115</td></tr>
+          <tr><td><b>XXXL</b></td><td>116 – 121</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px">Measure around the fullest part of your hips. Between sizes? Size up for comfort.</p>
+    </div>
+    <div id="sg-socks" style="display:none">
+      <span class="sg-section">Unisex Socks — Shoe Size</span>
+      <table class="sg-table">
+        <thead><tr><th>Size</th><th>UK Shoe Size</th><th>EU Shoe Size</th></tr></thead>
+        <tbody>
+          <tr><td><b>One Size</b></td><td>6 – 11</td><td>39 – 46</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:var(--muted);margin-top:10px">Most of our socks are one-size-fits-most and stretch to accommodate a range of shoe sizes. Check the specific product's packaging photo for exact sizing, since this can vary by style.</p>
+    </div>
+    <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px">Not sure? Message us on <a href="https://wa.me/" target="_blank" id="sg-wa" style="color:var(--accent);font-weight:600">WhatsApp</a> and we'll help you find the right fit.</p>
+  </div>
+</div>
+
+<!-- CART OVERLAY + SIDEBAR -->
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-sidebar" id="cart-sidebar">
+  <div class="cart-head">
+    <h3>Your Cart</h3>
+    <button class="cart-close" onclick="closeCart()" aria-label="Close">✕</button>
+  </div>
+  <div class="cart-body" id="cart-body"></div>
+  <div class="cart-foot" id="cart-foot" style="display:none">
+    <div id="fd-bar-wrap" class="fd-bar-wrap" style="display:none">
+      <div class="fd-bar-msg" id="fd-bar-msg"></div>
+      <div class="fd-track"><div class="fd-fill" id="fd-fill" style="width:0%"></div></div>
+    </div>
+    <div class="cart-subtotal">
+      <span>Subtotal</span>
+      <strong id="cart-total">GH₵0.00</strong>
+    </div>
+    <p style="font-size:11.5px;color:var(--muted);margin-bottom:12px;text-align:center">Delivery fee confirmed via WhatsApp</p>
+    <button class="btn-checkout" onclick="openCheckout()">Proceed to Checkout →</button>
+    <button class="btn-continue" onclick="closeCart()">Continue Shopping</button>
+    <p class="wa-alt">Prefer to order by chat? <a href="https://wa.me/" target="_blank" id="cart-wa">Message us on WhatsApp</a></p>
+  </div>
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>Checkout</h3>
+      <button class="modal-close" onclick="closeCheckout()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="order-summary">
+        <h4>Order Summary</h4>
+        <div id="checkout-items"></div>
+        <div class="summary-discount" id="promo-discount-line" style="display:none">
+          <span>Discount (<span id="promo-code-lbl"></span>)</span>
+          <span id="promo-disc-amt"></span>
+        </div>
+        <div class="summary-total">
+          <span>Total</span>
+          <span id="checkout-total">GH₵0.00</span>
+        </div>
+      </div>
+      <div class="form-grid2">
+        <div class="form-group">
+          <label>Full Name *</label>
+          <input type="text" id="co-name" placeholder="Ama Asante"/>
+        </div>
+        <div class="form-group">
+          <label>Phone *</label>
+          <input type="tel" id="co-phone" placeholder="0559 304 546"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email (optional)</label>
+        <input type="email" id="co-email" placeholder="ama@email.com"/>
+      </div>
+      <div class="form-group">
+        <label id="co-address-label">Delivery Address *</label>
+        <input type="text" id="co-address" placeholder="Paste Google Maps / Yango / GPS link or describe your exact location"/>
+        <p style="font-size:11px;color:#888;margin:5px 0 0;line-height:1.5">Share a <strong>Google Maps link</strong>, <strong>Yango address</strong>, or GPS coordinates so we can find you easily.</p>
+      </div>
+      <div class="form-group">
+        <label>Order Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <textarea id="co-notes" rows="2" placeholder="Any special instructions…"></textarea>
+      </div>
+      <div class="promo-row">
+        <input type="text" id="co-promo" placeholder="Promo code (optional)" autocomplete="off"/>
+        <button id="promo-apply-btn" onclick="applyPromo()">Apply</button>
+      </div>
+      <div id="promo-msg"></div>
+      <button class="btn-pay" id="checkout-pay-btn" onclick="sendOrderToWhatsApp()">
+        Send Order (<span id="pay-amount">GH₵0.00</span>) via WhatsApp
+      </button>
+      <div id="pay-error" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;padding:12px 16px;margin-top:10px;font-size:13px;color:#dc2626;line-height:1.6"></div>
+      <!-- WhatsApp order notice -->
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:10px 14px;background:var(--light);border:1px solid var(--border);border-radius:10px">
+        <span style="font-size:12.5px;color:var(--muted);font-weight:600;line-height:1.5">No online payment — we don't collect card or mobile money details on this site. Your order &amp; delivery details go straight to our WhatsApp, and our sales team will confirm payment with you there.</span>
+      </div>
+      <p class="secure-note">Your details are only shared with us via WhatsApp · Easy 48-hr returns</p>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK VIEW MODAL -->
+<div id="qv-overlay" onclick="if(event.target===this)closeQV()">
+  <div class="qv-modal">
+    <button class="qv-x" onclick="closeQV()" aria-label="Close">✕</button>
+    <div class="qv-left">
+      <div class="qv-main-wrap"><img id="qv-main-img" src="" alt="" onerror="this.src='https://images.unsplash.com/photo-1737094540182-d602f8a7dd1d?w=800';this.onerror=null"></div>
+      <div class="qv-thumbs" id="qv-thumbs"></div>
+    </div>
+    <div class="qv-right">
+      <div class="qv-cat" id="qv-cat"></div>
+      <h2 class="qv-name" id="qv-name"></h2>
+      <div id="qv-sale-strip"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div id="qv-price"></div>
+        <span id="qv-stock-note" class="qv-stock-note qv-stock-ok" style="display:none"></span>
+      </div>
+      <div class="qv-divider"></div>
+      <div id="qv-sizes"></div>
+      <div id="qv-colors"></div>
+      <div class="qv-qty-row">
+        <span class="opts-lbl">Qty</span>
+        <div class="qty-ctrl">
+          <button class="qty-btn" onclick="qvQty(-1)">&#8722;</button>
+          <span id="qv-qty-val">1</span>
+          <button class="qty-btn" onclick="qvQty(1)">+</button>
+        </div>
+      </div>
+      <p class="qv-desc" id="qv-desc"></p>
+      <div class="qv-btns">
+        <button class="qv-btn-cart" id="qv-btn-cart" onclick="qvAddCart()">&#128722; Add to Cart</button>
+        <button class="qv-btn-wa" id="qv-btn-wa" onclick="qvOrderWA()">&#128172; WhatsApp Order</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)">
+        <button id="qv-wishlist-btn" onclick="qvToggleWishlist()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#ccc;transition:color .2s" title="Save to wishlist" aria-label="Save to wishlist" aria-pressed="false">♡</button>
+        <button onclick="qvShareWA()" style="background:none;border:none;font-size:12px;font-weight:600;color:#888;cursor:pointer;font-family:var(--fb);display:flex;align-items:center;gap:5px;transition:color .2s" onmouseover="this.style.color='#25d366'" onmouseout="this.style.color='#888'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M5.077 20.95l.286-1.048C4.002 18.726 3 16.455 3 14.002 3 8.478 7.477 4 13 4s10 4.478 10 10.002c0 5.523-4.477 10.002-10 10.002-1.68 0-3.26-.427-4.642-1.178L5.077 20.95zM13 2C6.373 2 1 7.373 1 14.002c0 2.392.71 4.624 1.93 6.488L1.05 22.95 4.62 22.05C6.412 23.002 8.645 23.54 11 23.54c.674 0 1.333-.057 1.973-.167C19.14 22.36 24 18.546 24 14.002 24 7.373 19.627 2 13 2z"/></svg>
+          Share on WhatsApp
+        </button>
+      </div>
+      <!-- Upsell section -->
+      <div id="qv-upsell" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px">You might also like</p>
+        <div id="qv-upsell-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIFY ME MODAL -->
+<div class="modal-overlay" id="notify-modal" onclick="if(event.target===this)closeNotify()">
+  <div class="modal-box" style="max-width:400px">
+    <div class="modal-head">
+      <h3>Notify Me</h3>
+      <button class="modal-close" onclick="closeNotify()" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:4px">We'll message you on WhatsApp the moment <strong id="notify-product-name"></strong> is back in stock.</p>
+      <div class="form-group" style="margin-top:16px">
+        <label>Your Name *</label>
+        <input type="text" id="notify-name" placeholder="Full name"/>
+      </div>
+      <div class="form-group">
+        <label>Phone Number (WhatsApp) *</label>
+        <input type="tel" id="notify-phone" placeholder="e.g. 0244 123 456"/>
+      </div>
+      <input type="hidden" id="notify-product-id"/>
+      <div id="notify-success" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 16px;text-align:center;margin-top:12px">
+        <div style="font-size:24px;margin-bottom:6px">✓</div>
+        <p style="margin:0;font-size:14px;font-weight:600;color:#16a34a">You're on the list!</p>
+        <p id="notify-success-msg" style="margin:4px 0 0;font-size:13px;color:#166534"></p>
+      </div>
+      <button id="notify-submit-btn" class="btn-pay" onclick="submitNotify()" style="background:var(--accent);margin-top:8px" onmouseover="this.style.background='var(--accent2)'" onmouseout="this.style.background='var(--accent)'">Notify Me When Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- SUCCESS OVERLAY -->
+<div class="success-overlay" id="success-overlay" onclick="if(event.target===this)closeSuccess()">
+  <div class="success-box">
+    <div class="success-icon">✓</div>
+    <h2>Order Sent!</h2>
+    <p>Thank you for shopping with Freeman Outlet!</p>
+    <div class="success-ref" id="success-ref">—</div>
+    <div style="margin:20px 0;text-align:left;background:var(--light);border-radius:12px;padding:16px 20px">
+      <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px">What happens next</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px">
+          <span style="font-size:18px;line-height:1">✓</span>
+          <span><strong>Order received</strong> — no payment has been taken yet.</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px">
+          <span style="font-size:18px;line-height:1">✓</span>
+          <span><strong>We confirm on WhatsApp</strong> — pricing, delivery and payment are arranged with you there.</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px">
+          <span style="font-size:18px;line-height:1">✓</span>
+          <span><strong>We prepare your order</strong> — usually within 24 hours.</span>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px">
+          <span style="font-size:18px;line-height:1">✓</span>
+          <span><strong>WhatsApp update</strong> — we'll message you when dispatched.</span>
+        </div>
+      </div>
+    </div>
+    <a id="success-wa-btn" href="#" target="_blank" rel="noopener" style="display:block;background:#25d366;color:#fff;font-size:14px;font-weight:700;padding:13px 24px;border-radius:10px;text-decoration:none;text-align:center;margin-bottom:10px">Send Order via WhatsApp</a>
+    <button class="btn-success" onclick="closeSuccess()">Continue Shopping</button>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="modal-overlay" id="account-modal" onclick="if(event.target===this)closeAccountModal()">
+  <div class="account-box">
+    <button class="acct-close" onclick="closeAccountModal()" aria-label="Close">✕</button>
+
+    <!-- ── AUTH VIEW (not signed in) ── -->
+    <div id="acct-auth-view">
+      <div class="acct-logo"></div>
+      <div class="acct-tabs">
+        <button class="acct-tab active" id="acct-tab-login"    onclick="switchAcctTab('login')">Sign In</button>
+        <button class="acct-tab"        id="acct-tab-register" onclick="switchAcctTab('register')">Create Account</button>
+      </div>
+
+      <div id="acct-login-form">
+        <!-- Google Sign-In button -->
+        <div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:14px"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;color:#aaa;font-family:var(--fb);white-space:nowrap">or sign in with email</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="acct-field"><input type="email"    id="acct-login-email" placeholder="Email address" autocomplete="email"/></div>
+        <div class="acct-field"><input type="password" id="acct-login-pass"  placeholder="Password" autocomplete="current-password"/></div>
+        <div id="acct-login-err" class="acct-err" style="display:none"></div>
+        <button class="acct-submit" id="acct-login-btn" onclick="accountLogin()">Sign In</button>
+        <p style="text-align:center;margin-top:10px;font-size:12px"><button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:var(--fb)">Forgot password?</button></p>
+      </div>
+
+      <!-- Forgot password form -->
+      <div id="acct-forgot-form" style="display:none">
+        <p style="font-size:13px;color:var(--muted);margin:0 0 14px">Enter your email and we'll send you a reset link.</p>
+        <div class="acct-field"><input type="email" id="acct-forgot-email" placeholder="Email address" autocomplete="email"/></div>
+        <div id="acct-forgot-msg" style="display:none;font-size:13px;margin-bottom:10px"></div>
+        <button class="acct-submit" onclick="sendForgotPassword()">Send Reset Link</button>
+        <p style="text-align:center;margin-top:10px;font-size:12px"><button onclick="switchAcctTab('login')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:var(--fb)">← Back to sign in</button></p>
+      </div>
+
+      <div id="acct-reg-form" style="display:none">
+        <!-- Google Sign-Up button -->
+        <div id="g-signup-btn" style="display:flex;justify-content:center;margin-bottom:14px"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+          <span style="font-size:11px;color:#aaa;font-family:var(--fb);white-space:nowrap">or create with email</span>
+          <div style="flex:1;height:1px;background:var(--border)"></div>
+        </div>
+        <div class="acct-field"><input type="text"     id="acct-reg-name"  placeholder="Full name" autocomplete="name"/></div>
+        <div class="acct-field"><input type="email"    id="acct-reg-email" placeholder="Email address" autocomplete="email"/></div>
+        <div class="acct-field">
+          <input type="password" id="acct-reg-pass" placeholder="Password (min 8 characters)" autocomplete="new-password" oninput="updatePasswordStrength(this.value)"/>
+          <div id="pw-strength-bar" style="height:3px;border-radius:2px;margin-top:4px;background:#eee;transition:all .3s"><div id="pw-strength-fill" style="height:100%;border-radius:2px;width:0;transition:all .3s"></div></div>
+          <p id="pw-strength-label" style="font-size:11px;color:#aaa;margin:3px 0 0"></p>
+        </div>
+        <div id="acct-reg-err" class="acct-err" style="display:none"></div>
+        <button class="acct-submit" id="acct-reg-btn" onclick="accountRegister()">Create Account</button>
+      </div>
+    </div>
+
+    <!-- ── LOGGED IN VIEW ── -->
+    <div id="acct-loggedin-view" style="display:none">
+      <!-- Email not verified banner -->
+      <div id="acct-verify-banner" style="display:none;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#92400e">
+        Please verify your email. <button onclick="resendVerification()" style="background:none;border:none;color:var(--dark);font-weight:700;cursor:pointer;font-size:12px;text-decoration:underline;padding:0;font-family:var(--fb)">Resend link</button>
+      </div>
+      <div class="acct-profile-header">
+        <div class="acct-avatar" id="acct-avatar">?</div>
+        <div style="flex:1;min-width:0">
+          <p class="acct-display-name" id="acct-display-name">—</p>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:2px">
+            <p class="acct-display-email" id="acct-display-email" style="margin:0">—</p>
+            <span id="acct-email-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px"></span>
+          </div>
+          <!-- Order stats -->
+          <div id="acct-stats" style="display:none;margin-top:8px;display:flex;gap:14px">
+            <div style="text-align:center">
+              <p id="acct-stat-orders" style="margin:0;font-size:16px;font-weight:800;color:var(--accent)">—</p>
+              <p style="margin:0;font-size:10px;color:#aaa;font-family:var(--fb)">Orders</p>
+            </div>
+            <div style="width:1px;background:#f0ede9"></div>
+            <div style="text-align:center">
+              <p id="acct-stat-spent" style="margin:0;font-size:16px;font-weight:800;color:var(--dark)">—</p>
+              <p style="margin:0;font-size:10px;color:#aaa;font-family:var(--fb)">Spent</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="acct-tabs">
+        <button class="acct-tab active" id="acct-tab-orders"  onclick="switchAcctSection('orders')">My Orders</button>
+        <button class="acct-tab"        id="acct-tab-profile" onclick="switchAcctSection('profile')">Profile</button>
+      </div>
+
+      <div id="acct-orders-section">
+        <div id="acct-orders-list"><p class="acct-empty">Loading orders…</p></div>
+      </div>
+
+      <div id="acct-profile-section" style="display:none">
+        <div class="acct-field"><label>Name</label><input type="text" id="acct-prof-name" placeholder="Full name"/></div>
+        <div class="acct-field"><label>Phone</label><input type="tel" id="acct-prof-phone" placeholder="0559 304 546"/></div>
+        <div class="acct-field"><label>Default Address</label><input type="text" id="acct-prof-addr" placeholder="e.g. East Legon, Accra or Google Maps link"/></div>
+        <div id="acct-prof-msg" style="display:none"></div>
+        <button class="acct-submit" onclick="saveProfile()">Save Changes</button>
+
+        <!-- Change Password (hidden for Google accounts) -->
+        <div id="acct-change-pw-wrap" style="margin-top:18px;padding-top:16px;border-top:1px solid #f3f4f6">
+          <p style="font-size:12px;color:#888;margin:0 0 10px;font-weight:600">Change Password</p>
+          <div class="acct-field" style="margin-bottom:8px"><input type="password" id="acct-pw-current" placeholder="Current password"/></div>
+          <div class="acct-field" style="margin-bottom:8px"><input type="password" id="acct-pw-new" placeholder="New password (min 8 chars)"/></div>
+          <div id="acct-pw-msg" style="display:none;font-size:12px;margin-bottom:8px"></div>
+          <button onclick="changePassword()" style="background:var(--dark);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fb);width:100%;transition:background .2s" onmouseover="this.style.background='var(--accent)'" onmouseout="this.style.background='var(--dark)'">Update Password</button>
+        </div>
+
+        <!-- Danger Zone -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #f3f4f6;padding-bottom:8px">
+          <p style="font-size:11px;color:#ccc;margin:0 0 10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em">Danger Zone</p>
+          <button onclick="requestDeleteAccount()" style="background:none;border:1.5px solid #fecaca;color:#dc2626;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--fb);width:100%;transition:all .2s" onmouseover="this.style.background='#fef2f2'" onmouseout="this.style.background='none'">Delete My Account</button>
+        </div>
+      </div>
+
+      <button class="acct-signout" onclick="accountSignOut()">Sign Out</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/storefront.js" defer></script>
+
+<!-- FLOATING WHATSAPP BUTTON -->
+<a href="https://wa.me/" target="_blank" rel="noopener" class="wa-island" aria-label="Chat on WhatsApp">
+  <iconify-icon icon="logos:whatsapp-icon" width="26" height="26" style="flex-shrink:0"></iconify-icon>
+  <span class="wa-island-label">Chat with us</span>
+</a>
+</body>
+</html>

@@ -1,0 +1,72 @@
+        body { font-family: 'Jost', sans-serif; }
+        .tab-btn { color: #6b7280; background: transparent; transition: background .15s, color .15s; }
+        .tab-btn:hover { background: #f9fafb; color: #1a1a1a; }
+        .tab-btn.active { background: #1a1a1a; color: #fff; }
+        .tab-btn:focus-visible { outline: 2px solid #C9971C; outline-offset: 2px; border-radius: 10px; }
+
+        /* Primary group nav */
+        .grp-btn { color: #6b7280; background: transparent; cursor: pointer; transition: background .15s, color .15s; }
+        .grp-btn:hover { background: #f9fafb; color: #1a1a1a; }
+        .grp-btn.active { background: #1a1a1a; color: #fff; }
+        .grp-btn:focus-visible { outline: 2px solid #C9971C; outline-offset: 2px; border-radius: 10px; }
+        .grp-btn[draggable="true"] { user-select: none; }
+        .grp-btn[draggable="true"]:active { cursor: grabbing; }
+
+        /* Secondary sub-tab nav */
+        .sub-btn { color: #9ca3af; background: transparent; border: 1.5px solid transparent; cursor: pointer; transition: all .15s; white-space: nowrap; }
+        .sub-btn:hover { color: #374151; background: #f3f4f6; border-color: #e5e7eb; }
+        .sub-btn.active { color: #C9971C; border-color: #C9971C; background: #F2F2F2; }
+        .size-pick { padding: 5px 14px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 12px; font-weight: 700; color: #6b7280; background: white; cursor: pointer; transition: all .15s; }
+        .size-pick:hover { border-color: #C9971C; color: #A67C15; }
+        .size-pick.on { border-color: #C9971C; background: #C9971C; color: #1a1a1a; }
+        .size-pick:focus-visible { outline: 2px solid #C9971C; outline-offset: 2px; }
+
+        /* Stat card hover lift */
+        .stat-card-hover { transition: transform .2s cubic-bezier(0.16,1,0.3,1), box-shadow .2s; }
+        .stat-card-hover:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,.08); }
+
+        /* Table row hover — matches the gold tint admin.js's hover:bg-amber-50/30 class
+           intends (a <td> background paints above its <tr>'s, so this used to silently
+           override that class with plain grey; now it matches instead of fighting it). */
+        .data-row:hover td { background: #FAF7EF; }
+
+        /* Smooth input focus */
+        input:focus, textarea:focus, select:focus { transition: border-color .15s, box-shadow .15s; }
+        /* Inventory form collapse on list hover — flexbox so width transitions smoothly */
+        @media (min-width: 1024px) {
+            #section-products:not(.hidden) { display: flex !important; align-items: flex-start; }
+            #inv-form-panel {
+                flex-shrink: 0;
+                width: 33%;
+                overflow: hidden;
+                transition: width .4s cubic-bezier(0.4,0,0.2,1),
+                            opacity .3s cubic-bezier(0.4,0,0.2,1),
+                            transform .4s cubic-bezier(0.4,0,0.2,1),
+                            margin-right .4s cubic-bezier(0.4,0,0.2,1);
+            }
+            #inv-list-panel { flex: 1; min-width: 0; }
+            #section-products.list-focus #inv-form-panel {
+                width: 0;
+                opacity: 0;
+                transform: translateX(-8px);
+                margin-right: -2rem;
+                pointer-events: none;
+            }
+        }
+
+        /* Stock filter legend buttons */
+        .sfil-btn { color: #6b7280; background: #fff; border-color: #e5e7eb; cursor: pointer; }
+        .sfil-btn:hover { background: #f9fafb; color: #1a1a1a; border-color: #d1d5db; }
+        .sfil-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+        .sfil-btn.active span { opacity: 0.85; }
+
+        /* Internal stock sub-tabs */
+        .stab-btn { color: #6b7280; background: transparent; cursor: pointer; transition: background .15s, color .15s; }
+        .stab-btn:hover { background: #f9fafb; color: #1a1a1a; }
+        .stab-btn.active { background: #1a1a1a; color: #fff; }
+
+        .extra-img-slot { position: relative; border-radius: 10px; overflow: hidden; aspect-ratio: 1; background: #f9fafb; border: 1.5px dashed #e5e7eb; }
+        .extra-img-label { display: block; width: 100%; height: 100%; cursor: pointer; }
+        .extra-img-placeholder { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 11px; color: #9ca3af; font-weight: 600; }
+        .extra-img-preview { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .extra-img-x { position: absolute; top: 4px; right: 4px; background: rgba(0,0,0,.6); color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
