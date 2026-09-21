@@ -88,6 +88,26 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 function vColor(v) { return typeof v === 'object' && v ? (v.color || '') : String(v || ''); }
 function variantColors(variants) { return (variants || []).map(vColor).filter(Boolean); }
 
+// ── GHANA VAT (prices are VAT-inclusive) ─────────────────────────────────────
+// From 1 Jan 2026 (VAT Act 2025, Act 1151): VAT 15% + NHIL 2.5% + GETFund 2.5% = 20%,
+// all charged on the same VAT-exclusive amount. Given an inclusive total, the
+// exclusive amount is total / 1.20 and each levy is a percentage of that.
+const VAT_PARTS = [
+    { label: 'VAT', rate: 15 },
+    { label: 'NHIL', rate: 2.5 },
+    { label: 'GETFund Levy', rate: 2.5 }
+];
+const VAT_TOTAL_RATE = 20;
+function vatBreakdown(total) {
+    const t = Math.round((parseFloat(total) || 0) * 100) / 100;
+    const base = Math.round(t / (1 + VAT_TOTAL_RATE / 100) * 100) / 100;
+    const parts = VAT_PARTS.map(p => ({ label: p.label, rate: p.rate, amount: Math.round(base * p.rate) / 100 }));
+    // absorb rounding drift in the last levy so base + levies always equals the total exactly
+    const drift = Math.round((t - base - parts.reduce((s, p) => s + p.amount, 0)) * 100) / 100;
+    parts[parts.length - 1].amount = Math.round((parts[parts.length - 1].amount + drift) * 100) / 100;
+    return { inclusiveTotal: t, base, parts, totalRate: VAT_TOTAL_RATE };
+}
+
 // ── BUNDLE PRICING ───────────────────────────────────────────────────────────
 // A product can carry bundle offers ("3 pieces for GH₵690"). They are read
 // through productBundles() only, so an offer that stops being a genuine saving
@@ -409,6 +429,7 @@ const SETTINGS_DEFAULTS = {
     storeEmail:       '',
     invoiceAccountName: '',
     invoiceAccountNo:   '',
+    invoiceTin:         '',
     shopOpen:         true,
     shopClosedMsg:    'We\'re temporarily closed. Check back soon!',
     heroPill:         'Freeman Outlet · Ghana',
@@ -1091,8 +1112,10 @@ app.get('/api/admin/next-invoice-num', requireAdminJWT, (req, res) => {
 app.post('/api/admin/manual-invoice', requireAdminJWT, async (req, res) => {
     // mode: 'save' | 'save_email' | 'email_only'
     const { customer, items, discount, deliveryFee, notes, mode, invoiceNum } = req.body;
-    if (!customer?.name || !customer?.email)
-        return res.status(400).json({ success: false, message: 'Customer name and email are required.' });
+    if (!customer?.name)
+        return res.status(400).json({ success: false, message: 'Customer name is required.' });
+    if ((mode === 'save_email' || mode === 'email_only') && !customer?.email)
+        return res.status(400).json({ success: false, message: 'Enter the customer\'s email to send the invoice by email.' });
     if (!Array.isArray(items) || !items.length)
         return res.status(400).json({ success: false, message: 'At least one line item is required.' });
 
@@ -1129,6 +1152,7 @@ app.post('/api/admin/manual-invoice', requireAdminJWT, async (req, res) => {
         deliveryPrice:   delivery,
         deliveryAddress: customer.address || null,
         total,
+        vat: vatBreakdown(total),
         paidAt:  new Date().toISOString(),
         status:  'Pending'
     };
@@ -1273,6 +1297,7 @@ app.post('/api/whatsapp-order', (req, res) => {
         deliveryPrice: serverDelivery,
         deliveryAddress: deliveryAddress || null,
         total: serverTotal,
+        vat: vatBreakdown(serverTotal),
         paidAt: new Date().toISOString(),
         stockDeducted: !fulfillmentAlert,
         ...(fulfillmentAlert ? { fulfillmentAlert, status: 'Needs Review' } : {})
@@ -1705,6 +1730,13 @@ async function sendConfirmationEmail(order) {
         </tr>`;
     }).join('');
 
+    // VAT-inclusive breakdown
+    const vatB = order.vat || vatBreakdown(total);
+    const vatRowsHtml = vatB ? `
+          <tr><td colspan="2" style="padding:14px 0 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#aaa">Total includes</td></tr>
+          <tr><td style="padding:2px 0;font-size:12px;color:#777">Amount before VAT</td><td style="padding:2px 0;text-align:right;font-size:12px;color:#777">GH₵${vatB.base.toFixed(2)}</td></tr>
+          ${vatB.parts.map(p => `<tr><td style="padding:2px 0;font-size:12px;color:#777">${p.label} (${p.rate}%)</td><td style="padding:2px 0;text-align:right;font-size:12px;color:#777">GH₵${p.amount.toFixed(2)}</td></tr>`).join('')}` : '';
+
     // Customer invoice email
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
@@ -1714,6 +1746,7 @@ async function sendConfirmationEmail(order) {
   <div style="padding:28px 40px 22px;text-align:center;border-bottom:2px solid #C9971C">
     <img src="cid:logo@freemanoutlet" width="68" alt="Freeman Outlet" style="display:block;margin:0 auto 12px"/>
     <h1 style="margin:0;font-family:'Dancing Script',cursive;font-size:42px;color:#C9971C;font-weight:700;line-height:1">Invoice</h1>
+    ${(settings.invoiceTin || '').trim() ? `<p style="margin:8px 0 0;font-size:11px;color:#888">TIN: ${escHtml(settings.invoiceTin)}</p>` : ''}
   </div>
 
   <table width="100%" cellpadding="0" cellspacing="0">
@@ -1781,9 +1814,9 @@ async function sendConfirmationEmail(order) {
             <td style="padding:4px 0 8px;text-align:right;font-size:13px;color:#16a34a">−GH₵${parseFloat(promoDiscount).toFixed(2)}</td>
           </tr>` : ''}
           <tr>
-            <td style="padding:8px 0 14px;font-size:16px;font-weight:800;color:#1a1a1a;border-top:2px solid #1a1a1a">Total</td>
+            <td style="padding:8px 0 14px;font-size:16px;font-weight:800;color:#1a1a1a;border-top:2px solid #1a1a1a">Total${vatB ? ' (VAT incl.)' : ''}</td>
             <td style="padding:8px 0 14px;text-align:right;font-size:16px;font-weight:800;color:#C9971C;border-top:2px solid #1a1a1a">GH₵${total.toFixed(2)}</td>
-          </tr>
+          </tr>${vatRowsHtml}
         </table>
       </td>
     </tr>
@@ -2519,7 +2552,7 @@ app.post('/api/admin/test-email', requireAdminJWT, async (req, res) => {
 });
 
 app.put('/api/settings', requireAdminJWT, requireManagerOrOwner, (req, res) => {
-    let allowed = ['storeName','announcement','announcementOn','whatsapp','instagram','facebook','tiktok','snapchat','storeEmail','shopOpen','shopClosedMsg','heroPill','heroHeadline','heroSub','aboutHeading','aboutBody','footerTagline','trustLine1','trustLine2','trustLine3','trustLine4','freeDeliveryThreshold','freeDeliveryZone','featuredBannerEnabled','featuredBannerHeadline','featuredBannerSub','featuredBannerCta','featuredBannerLink','saleEnabled','saleEndDate','saleMessage','brandVideoUrl','brandVideoTitle','heroVideoEnabled','seoTitle','seoDescription','accentColor','fontBody','stockAlertEnabled','stockAlertThreshold','ownerEmail','ownerPhone','backupEnabled','invoiceAccountName','invoiceAccountNo','minOrderAmount'];
+    let allowed = ['storeName','announcement','announcementOn','whatsapp','instagram','facebook','tiktok','snapchat','storeEmail','shopOpen','shopClosedMsg','heroPill','heroHeadline','heroSub','aboutHeading','aboutBody','footerTagline','trustLine1','trustLine2','trustLine3','trustLine4','freeDeliveryThreshold','freeDeliveryZone','featuredBannerEnabled','featuredBannerHeadline','featuredBannerSub','featuredBannerCta','featuredBannerLink','saleEnabled','saleEndDate','saleMessage','brandVideoUrl','brandVideoTitle','heroVideoEnabled','seoTitle','seoDescription','accentColor','fontBody','stockAlertEnabled','stockAlertThreshold','ownerEmail','ownerPhone','backupEnabled','invoiceAccountName','invoiceAccountNo','minOrderAmount','invoiceTin'];
     // Bank account fields are owner-only — GET /api/admin/settings no longer sends
     // their real values to a manager/staff session, so a save from that session
     // would otherwise overwrite the real numbers with blanks.
@@ -3324,8 +3357,13 @@ app.get('/api/orders/:id/receipt', (req, res) => {
         <tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0">${escHtml(i.name)}${i.color?' — '+escHtml(i.color):''}${i.size?' / '+escHtml(i.size):''}</td>
             <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;text-align:center">×${parseInt(i.quantity)||1}</td>
             <td style="padding:8px 0;border-bottom:1px solid #f0f0f0;text-align:right">GH₵${(parseFloat(i.price||0)*parseInt(i.quantity||1)).toFixed(2)}</td></tr>`).join('');
+    const vatR = order.vat || vatBreakdown(order.total);
+    const vatRowsR = vatR ? `<tr><td colspan="3" style="padding-top:16px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#aaa">Total includes</td></tr>
+        <tr><td colspan="2" style="padding:3px 0;font-size:12px;color:#777">Amount before VAT</td><td style="padding:3px 0;text-align:right;font-size:12px;color:#777">GH₵${vatR.base.toFixed(2)}</td></tr>
+        ${vatR.parts.map(p => `<tr><td colspan="2" style="padding:3px 0;font-size:12px;color:#777">${p.label} (${p.rate}%)</td><td style="padding:3px 0;text-align:right;font-size:12px;color:#777">GH₵${p.amount.toFixed(2)}</td></tr>`).join('')}` : '';
+    const tinR = (settings.invoiceTin || '').trim();
     res.setHeader('Content-Type','text/html');
-    res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt — ${escHtml(order.orderNo||order.id)}</title>
+    res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Invoice — ${escHtml(order.orderNo||order.id)}</title>
 <style>*{margin:0;box-sizing:border-box}body{font-family:Helvetica,Arial,sans-serif;background:#f7f5f3;padding:32px 16px;color:#1a1a1a}
 .card{max-width:520px;margin:0 auto;background:#fff;border-radius:8px;padding:36px;box-shadow:0 2px 20px rgba(0,0,0,.08)}
 .label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#aaa;margin:20px 0 4px}
@@ -3339,13 +3377,13 @@ th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;lette
 <body><div class="card">
   <div style="text-align:center;margin-bottom:28px">
     <div style="font-size:22px;font-weight:900;color:#C9971C">${escHtml(merged.storeName)}</div>
-    <div style="font-size:11px;color:#aaa;margin-top:4px">Official Receipt</div>
+    <div style="font-size:11px;color:#aaa;margin-top:4px">Invoice${tinR?' · TIN: '+escHtml(tinR):''}</div>
   </div>
   <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:24px">
-    <div><div class="label">Order</div>
+    <div><div class="label">Invoice No.</div>
       <p style="font-weight:700;color:#1a1a1a">${order.orderNo?'#'+escHtml(order.orderNo):escHtml(order.id)}</p>
       <p style="font-size:11px;color:#aaa">${new Date(order.paidAt).toLocaleString('en-GH',{dateStyle:'long',timeStyle:'short'})}</p>
-    </div><span class="status">${escHtml(order.status||'Paid')}</span>
+    </div><span class="status">${escHtml(order.status||'Pending')}</span>
   </div>
   <div class="label">Customer</div>
   <p>${escHtml(c.name||'—')}</p>${c.phone?`<p>${escHtml(c.phone)}</p>`:''} ${c.address?`<p>${escHtml(c.address)}</p>`:''}
@@ -3356,11 +3394,12 @@ th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;lette
     ${parseFloat(order.deliveryPrice||0)>0?`<tr><td colspan="2" style="padding:8px 0;color:#555">Delivery${order.deliveryArea?' — '+escHtml(order.deliveryArea):''}</td><td style="padding:8px 0;text-align:right">GH₵${parseFloat(order.deliveryPrice).toFixed(2)}</td></tr>`:''}
     ${parseFloat(order.bundleDiscount||0)>0?`<tr><td colspan="2" style="padding:8px 0;color:#16a34a">Bundle savings</td><td style="padding:8px 0;text-align:right;color:#16a34a">−GH₵${parseFloat(order.bundleDiscount).toFixed(2)}</td></tr>`:''}
     ${parseFloat(order.promoDiscount||0)>0?`<tr><td colspan="2" style="padding:8px 0;color:#16a34a">Discount</td><td style="padding:8px 0;text-align:right;color:#16a34a">−GH₵${parseFloat(order.promoDiscount).toFixed(2)}</td></tr>`:''}
-    <tr class="total-row"><td colspan="2">Total Paid</td><td style="text-align:right">GH₵${parseFloat(order.total||0).toFixed(2)}</td></tr>
+    <tr class="total-row"><td colspan="2">Total (VAT incl.)</td><td style="text-align:right">GH₵${parseFloat(order.total||0).toFixed(2)}</td></tr>${vatRowsR}
   </tfoot></table>
+  ${order.paymentStatus!=='manual'?'<p style="margin-top:16px;font-size:11px;color:#888;text-align:center">Delivery fee, if any, is confirmed with you on WhatsApp.</p>':''}
   <p style="margin-top:28px;font-size:11px;color:#aaa;text-align:center">Thank you for shopping with ${escHtml(merged.storeName)}</p>
   <div class="no-print" style="margin-top:24px;text-align:center">
-    <button onclick="window.print()" style="background:#C9971C;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">🖨 Print / Save PDF</button>
+    <button onclick="window.print()" style="background:#C9971C;color:#fff;border:none;padding:10px 24px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer">Print / Save PDF</button>
   </div>
 </div></body></html>`);
 });

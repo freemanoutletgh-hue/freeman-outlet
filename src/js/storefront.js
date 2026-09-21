@@ -352,6 +352,8 @@
       }
       lastOrderData = { reference: data.order.reference, customer: _customer, cartItems: _items, total: data.order.total, bundleDiscount: data.order.bundleDiscount || 0, orderId: data.order.id };
       notifyOwnerWA(data.order.reference, _customer, _items);
+      var invBtn = document.getElementById('success-invoice-btn');
+      if (invBtn) invBtn.href = invoiceLink(data.order.id, _customer.phone);
       closeCheckout();
       cart = []; saveCart(); updateCartCount();
       document.getElementById('success-ref').textContent = 'Order Reference: ' + data.order.orderNo;
@@ -828,6 +830,11 @@
 
   var lastWAUrl = '';
 
+  // Public invoice page; it checks the customer's phone, which is part of the link.
+  function invoiceLink(orderId, rawPhone) {
+    return window.location.origin + '/api/orders/' + encodeURIComponent(orderId) + '/receipt?phone=' + encodeURIComponent(normalisePhone(rawPhone));
+  }
+
   function notifyOwnerWA(reference, customer, cartItems) {
     var ref  = reference  || (lastOrderData && lastOrderData.reference)  || '—';
     var cust = customer   || (lastOrderData && lastOrderData.customer)   || {};
@@ -835,6 +842,7 @@
     var total = Math.max(0, items.reduce(function(s,i){ return s + i.price * i.quantity; }, 0) - promoDiscount);
     if (lastOrderData && lastOrderData.total) total = lastOrderData.total;
     var phone = normalisePhone(cust.phone);
+    var invoiceUrl = (lastOrderData && lastOrderData.orderId) ? invoiceLink(lastOrderData.orderId, cust.phone) : '';
     var lines = items.map(function(i) {
       var meta = [i.color ? 'Colour: '+i.color : '', i.size ? 'Size: '+i.size : ''].filter(Boolean).join(', ');
       return '• ' + i.name + (meta ? ' (' + meta + ')' : '') + ' × ' + i.quantity + ' — GH₵' + (i.price * i.quantity).toFixed(2);
@@ -848,7 +856,8 @@
       + '\n*Items:*\n' + lines + '\n\n'
       + ((lastOrderData && lastOrderData.bundleDiscount > 0) ? '*Bundle savings:* −GH₵' + lastOrderData.bundleDiscount.toFixed(2) + '\n' : '')
       + '*Total (items):* GH₵' + total.toFixed(2) + '\n'
-      + '*Ref:* ' + ref;
+      + '*Ref:* ' + ref
+      + (invoiceUrl ? '\n*Invoice:* ' + invoiceUrl : '');
     lastWAUrl = 'https://wa.me/' + WA + '?text=' + encodeURIComponent(msg);
     // Update the button in the success overlay so users can tap it directly on mobile
     var waBtn = document.getElementById('success-wa-btn');

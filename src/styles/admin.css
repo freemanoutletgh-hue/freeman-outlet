@@ -1,4 +1,5 @@
-        body { font-family: 'Jost', sans-serif; }
+        body { font-family: 'Work Sans', system-ui, sans-serif; }
+        h1, h2, h3 { font-family: 'Oswald', 'Work Sans', sans-serif; letter-spacing: .02em; }
         .tab-btn { color: #6b7280; background: transparent; transition: background .15s, color .15s; }
         .tab-btn:hover { background: #f9fafb; color: #1a1a1a; }
         .tab-btn.active { background: #1a1a1a; color: #fff; }

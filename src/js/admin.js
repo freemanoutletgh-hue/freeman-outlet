@@ -19,7 +19,7 @@
                         if (d && d.error === 'signed_in_elsewhere') {
                             localStorage.removeItem(ADMIN_TOKEN_KEY);
                             adminToken = '';
-                            alert('⚠️ ' + (d.message || 'You were signed in on another device.') + '\n\nYou will be taken to the login screen.');
+                            alert('' + (d.message || 'You were signed in on another device.') + '\n\nYou will be taken to the login screen.');
                             location.reload();
                         }
                     }).catch(function(){});
@@ -100,7 +100,7 @@
             }
         })();
 
-        const SECTIONS = ['products', 'orders', 'reviews', 'codes', 'notify', 'images', 'delivery', 'categories', 'faq', 'analytics', 'product-analytics', 'customers', 'stock', 'invoice', 'settings', 'email'];
+        const SECTIONS = ['products', 'orders', 'reviews', 'codes', 'notify', 'images', 'categories', 'faq', 'analytics', 'product-analytics', 'customers', 'stock', 'invoice', 'settings'];
 
         // ── ADMIN PASSWORD CONFIRM ───────────────────────────────────────────
         let _adminConfirmCb = null;
@@ -192,19 +192,19 @@
 
         // ── GROUP NAV ────────────────────────────────────────────────────────
         const GROUPS = {
-            catalogue: { label: '📦 Catalogue', tabs: ['products', 'categories', 'stock'] },
-            sales:     { label: '🛒 Sales',     tabs: ['orders', 'invoice', 'codes'] },
-            customers: { label: '👥 Customers', tabs: ['customers', 'reviews', 'notify'] },
-            content:   { label: '🖼️ Content',   tabs: ['images', 'delivery', 'faq'] },
-            insights:  { label: '📊 Insights',  tabs: ['analytics', 'product-analytics'] },
-            settings:  { label: '⚙️ Settings',  tabs: ['settings', 'email'] },
+            catalogue: { label: 'Catalogue', tabs: ['products', 'categories', 'stock'] },
+            sales:     { label: 'Sales',     tabs: ['orders', 'invoice', 'codes'] },
+            customers: { label: 'Customers', tabs: ['customers', 'reviews', 'notify'] },
+            content:   { label: 'Content',   tabs: ['images', 'faq'] },
+            insights:  { label: 'Insights',  tabs: ['analytics', 'product-analytics'] },
+            settings:  { label: 'Settings',  tabs: ['settings'] },
         };
         const TAB_LABELS = {
-            products:   '📦 Products',   categories: '🏷 Categories', stock:    '📊 Stock',
-            orders:     '🛒 Orders',     invoice:    '📄 Invoice',    codes:    '🏷️ Promos',
-            customers:  '👥 Directory',  reviews:    '⭐ Reviews',    notify:   '🔔 Notify',
-            images:     '🖼️ Images',     delivery:   '🚚 Delivery',   faq:      '❓ FAQ',
-            analytics:  '📊 Revenue',  'product-analytics': '🔍 Products',  settings:   '⚙️ Settings',  email: '✉️ Email',
+            products:   'Products',   categories: 'Categories', stock:    'Stock',
+            orders:     'Orders',     invoice:    'Invoice',    codes:    'Promos',
+            customers:  'Directory',  reviews:    'Reviews',    notify:   'Notify',
+            images:     'Images',     faq:      'FAQ',
+            analytics:  'Revenue',  'product-analytics': 'Products',  settings:   'Settings',
         };
         let activeGroup = 'catalogue';
 
@@ -246,7 +246,6 @@
             if (name === 'reviews')    loadReviews();
             if (name === 'codes')      loadCodes();
             if (name === 'notify')     loadNotify();
-            if (name === 'delivery')   { loadDeliveryZones(); loadRegionRates(); rzLoadRegion(); }
             if (name === 'categories') loadCategories();
             if (name === 'images')     renderGallerySlots();
             if (name === 'faq')        loadFaqs();
@@ -257,7 +256,6 @@
             if (name === 'products')   loadInventory();
             if (name === 'invoice')    loadInvoiceTab();
             if (name === 'settings')   { loadSettings(); loadAdminAccounts(); if (typeof window._managerSettingsHide === 'function') setTimeout(window._managerSettingsHide, 500); }
-            if (name === 'email')      loadEmailTab();
         }
 
         // ── GROUP DRAG-AND-DROP ──────────────────────────────────────────────
@@ -413,14 +411,14 @@
                 const lowStock = products.filter(p => !p.isSoldOut && p.stock !== null && p.stock !== undefined && p.stock <= 3);
                 const lowStockBanner = document.getElementById('low-stock-banner');
                 if (lowStock.length > 0) {
-                    lowStockBanner.innerHTML = `⚠️ <strong>Low stock alert:</strong> ${lowStock.map(p => `${escAdm(p.name)} (${p.stock} left)`).join(', ')}`;
+                    lowStockBanner.innerHTML = `<strong>Low stock alert:</strong> ${lowStock.map(p => `${escAdm(p.name)} (${p.stock} left)`).join(', ')}`;
                     lowStockBanner.classList.remove('hidden');
                 } else { lowStockBanner.classList.add('hidden'); }
 
                 const noCat = products.filter(p => !p.category || !p.category.trim());
                 const noCatBanner = document.getElementById('no-category-banner');
                 if (noCat.length > 0) {
-                    noCatBanner.innerHTML = `🏷️ <strong>${noCat.length} product${noCat.length > 1 ? 's have' : ' has'} no category</strong> — they only appear under "All" on the shop. Click <strong>Edit</strong> on each to assign a category so they show up in the right filter.`;
+                    noCatBanner.innerHTML = `<strong>${noCat.length} product${noCat.length > 1 ? 's have' : ' has'} no category</strong> — they only appear under "All" on the shop. Click <strong>Edit</strong> on each to assign a category so they show up in the right filter.`;
                     noCatBanner.classList.remove('hidden');
                 } else { noCatBanner.classList.add('hidden'); }
 
@@ -467,11 +465,11 @@
                     <td class="py-3 px-3 w-8"><input type="checkbox" class="bulk-check rounded" style="accent-color:#C9971C" onchange="updateBulkBar()" value="${p.id}"></td>
                     <td class="py-3 px-4" style="min-width:200px;max-width:260px">
                         <div style="display:flex;align-items:center;gap:10px">
-                            <img src="${p.image}" style="width:40px;height:40px;object-fit:cover;border-radius:10px;background:#f3f4f6;flex-shrink:0;border:1px solid #f3f4f6" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2218%22%3E📦%3C/text%3E%3C/svg%3E'">
+                            <img src="${p.image}" style="width:40px;height:40px;object-fit:cover;border-radius:10px;background:#f3f4f6;flex-shrink:0;border:1px solid #f3f4f6" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2240%22 height=%2240%22%3E%3Crect width=%2240%22 height=%2240%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2218%22%3E%3C/text%3E%3C/svg%3E'">
                             <div style="min-width:0;flex:1">
                                 <p class="font-semibold text-gray-900 text-sm truncate">${escAdm(p.name)}</p>
                                 <p class="text-gray-400 truncate" style="font-size:11px">${variantColors(p.variants).join(', ') || 'No colour variants'}</p>
-                                <p class="text-gray-300 truncate" style="font-size:10px;margin-top:2px">${p.updatedAt ? `✏️ ${relTime(p.updatedAt)}${p.lastEditedBy ? ' by <strong>' + escAdm(p.lastEditedBy) + '</strong>' : ''}` : p.createdAt ? '🕐 ' + relTime(p.createdAt) : ''}</p>
+                                <p class="text-gray-300 truncate" style="font-size:10px;margin-top:2px">${p.updatedAt ? `${relTime(p.updatedAt)}${p.lastEditedBy ? ' by <strong>' + escAdm(p.lastEditedBy) + '</strong>' : ''}` : p.createdAt ? '' + relTime(p.createdAt) : ''}</p>
                             </div>
                         </div>
                     </td>
@@ -484,21 +482,21 @@
                     </td>
                     <td class="py-3 px-4" style="white-space:nowrap">
                         <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide ${p.isSoldOut ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'}">
-                            ${p.isSoldOut ? '🔴 Sold Out' : '🟢 In Stock'}
+                            ${p.isSoldOut ? '● Sold Out' : '● In Stock'}
                         </span>
                     </td>
                     <td class="py-3 px-4" style="white-space:nowrap">
                         <button onclick="toggleListed('${p.id}', ${p.isListed !== false})"
                             class="px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide transition ${p.isListed === false ? 'bg-gray-100 text-gray-400 border border-gray-200' : 'bg-blue-50 text-blue-700 border border-blue-200'}">
-                            ${p.isListed === false ? '🔕 Unlisted' : '📢 Listed'}
+                            ${p.isListed === false ? 'Unlisted' : 'Listed'}
                         </button>
                     </td>
                     <td class="py-3 px-4 text-center">
                         <button onclick="toggleFeatured('${p.id}', ${isFeat})" title="${isFeat ? 'Remove from featured' : 'Mark as featured'}" class="text-xl transition ${isFeat ? 'text-amber-400' : 'text-gray-200 hover:text-amber-300'}">★</button>
                     </td>
                     <td class="py-3 px-4 text-right" style="white-space:nowrap">
-                        <button onclick="showHistory(getProductById('${p.id}'))" class="text-gray-400 hover:text-gray-600 font-bold text-xs transition mr-1" title="Change history">📋</button>
-                        <button onclick="cloneProduct('${p.id}')" class="text-blue-400 hover:text-blue-600 font-bold text-xs transition mr-1" title="Duplicate">⎘</button>
+                        <button onclick="showHistory(getProductById('${p.id}'))" class="text-gray-400 hover:text-gray-600 font-bold text-xs transition mr-1" title="Change history">History</button>
+                        <button onclick="cloneProduct('${p.id}')" class="text-blue-400 hover:text-blue-600 font-bold text-xs transition mr-1" title="Duplicate">Duplicate</button>
                         <button onclick="startEditMode(getProductById('${p.id}'))" class="text-amber-600 hover:text-amber-700 font-bold text-xs transition mr-1">Edit</button>
                         <button onclick="deleteProduct('${p.id}')" class="text-rose-600 hover:text-rose-700 font-bold text-xs transition">Delete</button>
                     </td>
@@ -541,7 +539,7 @@
                     ).join('');
                     return `<div class="flex gap-3">
                       <div class="flex flex-col items-center flex-shrink-0">
-                        <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm">✏️</div>
+                        <div class="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm"></div>
                         ${!isLast || product.createdAt ? '<div class="w-px flex-1 bg-gray-100 mt-1"></div>' : ''}
                       </div>
                       <div class="pb-5 flex-1">
@@ -708,7 +706,7 @@
             }
             const skipNote = skipped > 0 ? ` (${skipped} current-month order${skipped > 1 ? 's' : ''} will be skipped)` : '';
             requireAdminConfirm(
-                '🗑 Bulk Delete Orders',
+                'Bulk Delete Orders',
                 `This will email backups then permanently delete ${ids.length} order${ids.length > 1 ? 's' : ''}${skipNote}. This cannot be undone.`,
                 async () => {
                     // Target the delete button specifically — it used to be the first
@@ -720,7 +718,7 @@
                     // into the next time it was shown).
                     const btn = document.getElementById('bulk-delete-btn');
                     const originalText = btn.textContent;
-                    btn.disabled = true; btn.textContent = '⏳ Deleting…';
+                    btn.disabled = true; btn.textContent = 'Deleting…';
                     let failed = 0;
                     try {
                         for (const id of ids) {
@@ -790,12 +788,12 @@
                 const status = o.status || 'Pending';
                 const statusColors = { 'Pending':'bg-yellow-100 text-yellow-700', 'Processing':'bg-blue-100 text-blue-700', 'Shipped':'bg-purple-100 text-purple-700', 'Delivered':'bg-green-100 text-green-700', 'Returned':'bg-red-100 text-red-600', 'Refunded':'bg-rose-100 text-rose-700', 'Needs Review':'bg-red-100 text-red-700' };
                 const sc = statusColors[status] || 'bg-gray-100 text-gray-600';
-                const alertBadge = o.fulfillmentAlert ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-red-50 text-red-600 border border-red-200" title="${escAdm(o.fulfillmentAlert)}">⚠️ Stock issue</span>` : '';
+                const alertBadge = o.fulfillmentAlert ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-red-50 text-red-600 border border-red-200" title="${escAdm(o.fulfillmentAlert)}">Stock issue</span>` : '';
                 const ps = o.paymentStatus || 'paid';
                 const payBadge = ps === 'paid'
                     ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-100">✓ Paid</span>`
                     : ps === 'test'
-                    ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">🧪 Test</span>`
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">Test</span>`
                     : `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">✓ Paid</span>`;
                 const isChecked = selectedOrders.has(o.id);
                 return `
@@ -823,8 +821,8 @@
                     <td class="py-4 px-4 text-xs text-gray-400 whitespace-nowrap">${date}</td>
                     <td class="py-4 px-4" onclick="event.stopPropagation()">
                         <div class="flex gap-1">
-                            <button onclick="printOrderDoc('${o.id}')" title="Download receipt" class="text-xs px-2 py-1 rounded-lg bg-orange-50 text-orange-500 hover:bg-orange-100 font-semibold border border-orange-100 transition">⬇</button>
-                            <button id="del-btn-${o.id}" onclick="deleteOrder('${o.id}')" title="Archive & delete — sends email backup first" class="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-semibold border border-red-100 transition">🗑</button>
+                            <button onclick="printOrderDoc('${o.id}')" title="Download invoice" class="text-xs px-2 py-1 rounded-lg bg-orange-50 text-orange-500 hover:bg-orange-100 font-semibold border border-orange-100 transition">Invoice</button>
+                            <button id="del-btn-${o.id}" onclick="deleteOrder('${o.id}')" title="Archive & delete — sends email backup first" class="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-semibold border border-red-100 transition">Delete</button>
                         </div>
                     </td>
                 </tr>`;
@@ -942,7 +940,7 @@
             modal.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
                 <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-xl flex-shrink-0">🚚</div>
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-xl flex-shrink-0"></div>
                     <div>
                         <h3 class="text-sm font-bold text-gray-900">Mark as Shipped</h3>
                         <p class="text-xs text-gray-400 mt-0.5">Add delivery details — sent to customer via email</p>
@@ -1040,11 +1038,11 @@
 
         function deleteOrder(id) {
             requireAdminConfirm(
-                '🗑 Delete Order',
+                'Delete Order',
                 'This will email a full backup of this order to the store, then permanently delete it.',
                 () => {
                     const btn = document.getElementById('del-btn-' + id);
-                    if (btn) { btn.disabled = true; btn.textContent = '⏳ Sending…'; }
+                    if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
                     fetch('/api/orders/' + id, { method: 'DELETE' })
                         .then(r => r.json())
                         .then(data => {
@@ -1054,12 +1052,12 @@
                                 loadOrders();
                             } else {
                                 showToast('Delete failed: ' + (data.message || 'unknown error'), true);
-                                if (btn) { btn.disabled = false; btn.textContent = '🗑 Delete'; }
+                                if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
                             }
                         })
                         .catch(() => {
                             showToast('Network error — order was not deleted.', true);
-                            if (btn) { btn.disabled = false; btn.textContent = '🗑 Delete'; }
+                            if (btn) { btn.disabled = false; btn.textContent = 'Delete'; }
                         });
                 }
             );
@@ -1094,7 +1092,7 @@
 
         function deleteProduct(id) {
             requireAdminConfirm(
-                '🗑 Delete Product',
+                'Delete Product',
                 'This will permanently remove the product and all its images.',
                 () => {
                     fetch(`/api/products/${id}`, { method: 'DELETE' })
@@ -1110,7 +1108,7 @@
 
         function deleteBaseProduct(id) {
             requireAdminConfirm(
-                '🗑 Delete Base Product',
+                'Delete Base Product',
                 'This will permanently remove the product and its cost data.',
                 () => {
                     fetch(`/api/products/${id}`, { method: 'DELETE' })
@@ -1128,7 +1126,7 @@
             document.getElementById('product-identity-new').classList.add('hidden');
             document.getElementById('product-identity-edit').classList.remove('hidden');
 
-            document.getElementById('form-title').innerHTML = "✏️ Edit Product";
+            document.getElementById('form-title').innerHTML = "Edit Product";
             document.getElementById('form-subtitle').textContent = '';
             document.getElementById('edit-id').value = product.id;
             // Keep hidden name in sync
@@ -1193,7 +1191,7 @@
                         if (r.status === 409) {
                             const d = await r.json();
                             btn.disabled = false; btn.textContent = 'Save Changes';
-                            if (confirm('⚠️ Conflict detected!\n\n' + (d.message || 'Another admin edited this product.') + '\n\nClick OK to reload the product and lose your changes, or Cancel to force-save anyway.')) {
+                            if (confirm('Conflict detected!\n\n' + (d.message || 'Another admin edited this product.') + '\n\nClick OK to reload the product and lose your changes, or Cancel to force-save anyway.')) {
                                 startEditMode(getProductById(product.id));
                                 loadInventory();
                             } else {
@@ -1335,7 +1333,7 @@
                 const imgSrc = v.previewUrl || v.existingImage;
                 const imgEl = imgSrc
                     ? `<img src="${escAdm(imgSrc)}" class="h-16 w-full object-cover rounded-lg">`
-                    : `<div class="h-16 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg text-xs text-gray-400 hover:border-orange-300 hover:text-orange-400 transition">📷 Upload</div>`;
+                    : `<div class="h-16 flex items-center justify-center border-2 border-dashed border-gray-200 rounded-lg text-xs text-gray-400 hover:border-orange-300 hover:text-orange-400 transition">Upload</div>`;
                 return `<div class="grid gap-2 items-start border border-gray-200 rounded-xl p-3 bg-gray-50" style="grid-template-columns:1fr auto">
                     <div class="space-y-2">
                         <div class="flex items-center gap-2">
@@ -1711,7 +1709,7 @@
                                 class="text-rose-400 hover:text-rose-600 text-xs font-bold transition mt-0.5">✕</button>
                         </div>
                     </div>
-                    ${r.approved === false ? '<div class="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">⏳ Pending approval</div>' : ''}
+                    ${r.approved === false ? '<div class="text-[10px] font-bold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">Pending approval</div>' : ''}
                     <p class="text-amber-400 text-sm tracking-wide leading-none">${stars}</p>
                     <p class="text-sm text-gray-600 italic leading-relaxed flex-1">"${escAdm(r.message)}"</p>
                     <div class="flex items-center justify-between flex-wrap gap-1">
@@ -1725,7 +1723,7 @@
 
         function deleteReview(id) {
             requireAdminConfirm(
-                '🗑 Delete Review',
+                'Delete Review',
                 'This review will be permanently removed. This cannot be undone.',
                 () => {
                     fetch(`/api/reviews/${id}`, { method: 'DELETE' })
@@ -1810,7 +1808,7 @@
                 })
                 .catch(err => {
                     document.getElementById('notify-table-body').innerHTML =
-                        '<tr><td colspan="6" class="text-center py-6 text-red-400 text-xs font-semibold">⚠ ' + err.message + '</td></tr>';
+                        '<tr><td colspan="6" class="text-center py-6 text-red-400 text-xs font-semibold">' + err.message + '</td></tr>';
                 });
         }
 
@@ -1838,7 +1836,7 @@
                     <td class="py-3 px-4 text-xs text-gray-400 whitespace-nowrap">${date}</td>
                     <td class="py-3 px-4">
                         <div class="flex gap-1">
-                            <button id="nbtn-${n.id}" onclick="sendNotify('${n.id}',this)" class="text-xs px-2 py-1 rounded-lg ${sent ? 'bg-green-50 text-green-600 border-green-100' : 'bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100'} border transition font-semibold whitespace-nowrap">${sent ? '✅ Notified' : '📲 Notify'}</button>
+                            <button id="nbtn-${n.id}" onclick="sendNotify('${n.id}',this)" class="text-xs px-2 py-1 rounded-lg ${sent ? 'bg-green-50 text-green-600 border-green-100' : 'bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100'} border transition font-semibold whitespace-nowrap">${sent ? 'Notified' : 'Notify'}</button>
                             <button onclick="deleteNotify('${n.id}')" class="text-xs px-2 py-1 rounded-lg bg-red-50 text-red-400 hover:bg-red-100 border border-red-100 transition font-semibold">✕</button>
                         </div>
                     </td>
@@ -1852,7 +1850,7 @@
         // themselves. The server marks the entry "notified" once this succeeds.
         function sendNotify(id, btn) {
             btn.disabled = true;
-            btn.textContent = '⏳ Opening…';
+            btn.textContent = 'Opening…';
             fetch('/api/notify/' + encodeURIComponent(id) + '/send', { method: 'POST' })
                 .then(r => r.json())
                 .then(d => {
@@ -1862,38 +1860,38 @@
                         // can (and often do) treat that as a non-user-initiated popup and
                         // silently block it, returning null. The server has already set
                         // notifiedAt at this point regardless, so the old code showed
-                        // "✅ Notified" even when no chat ever opened and no message was
+                        // "Notified" even when no chat ever opened and no message was
                         // ever sent. Now: on a blocked popup, swap the button for a real
                         // link instead — clicking THAT is a genuine user gesture, so it
                         // always opens.
                         const win = window.open(d.waUrl, '_blank');
                         if (win) {
-                            btn.textContent = '✅ Notified';
+                            btn.textContent = 'Notified';
                             btn.className = btn.className.replace('bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100', 'bg-green-50 text-green-600 border-green-100');
                         } else {
                             const link = document.createElement('a');
                             link.href = d.waUrl; link.target = '_blank'; link.rel = 'noopener';
                             link.className = btn.className.replace('bg-violet-50 text-violet-600 hover:bg-violet-100 border-violet-100', 'bg-green-50 text-green-600 border-green-100');
-                            link.textContent = '✅ Notified — open chat';
+                            link.textContent = 'Notified — open chat';
                             btn.replaceWith(link);
                             showToast('Popup was blocked — click the link to open the WhatsApp chat.', true);
                         }
                     } else {
                         showToast('Could not open WhatsApp: ' + (d.message || 'unknown error'), true);
                         btn.disabled = false;
-                        btn.textContent = '📲 Notify';
+                        btn.textContent = 'Notify';
                     }
                 })
                 .catch(() => {
                     showToast('Network error.', true);
                     btn.disabled = false;
-                    btn.textContent = '📲 Notify';
+                    btn.textContent = 'Notify';
                 });
         }
 
         function deleteNotify(id) {
             requireAdminConfirm(
-                '🗑 Remove Notify Entry',
+                'Remove Notify Entry',
                 'This customer will be removed from the restock notification list.',
                 () => {
                     fetch('/api/notify/' + encodeURIComponent(id), { method: 'DELETE' })
@@ -1944,7 +1942,7 @@
                                 <span class="text-xs text-gray-500 bg-white border border-gray-200 px-2.5 py-0.5 rounded-lg">
                                     ${c.type === 'percent' ? escAdm(c.value) + '% off' : 'GH₵' + escAdm(c.value) + ' off'}
                                 </span>
-                                ${c.referrer ? `<span class="text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">👤 ${escAdm(c.referrer)}</span>` : ''}
+                                ${c.referrer ? `<span class="text-[11px] font-semibold text-purple-600 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">${escAdm(c.referrer)}</span>` : ''}
                                 ${c.totalRevenue ? `<span class="text-[11px] text-emerald-600 font-semibold">GH₵${parseFloat(c.totalRevenue).toFixed(2)} revenue</span>` : ''}
                                 ${c.minOrder ? `<span class="text-[11px] text-gray-400">Min: GH₵${escAdm(c.minOrder)}</span>` : ''}
                                 ${c.maxUses ? `<span class="text-[11px] text-blue-500">${c.usedCount||0}/${c.maxUses} used</span>` : (c.usedCount ? `<span class="text-[11px] text-gray-400">${c.usedCount} used</span>` : '')}
@@ -1986,7 +1984,7 @@
 
         function deleteCode(code) {
             requireAdminConfirm(
-                '🗑 Delete Promo Code',
+                'Delete Promo Code',
                 `Promo code "${code}" will be permanently deleted and can no longer be used.`,
                 () => {
                     fetch(`/api/codes/${encodeURIComponent(code)}`, { method: 'DELETE' })
@@ -1999,243 +1997,7 @@
                 }
             );
         }
-        let deliveryZonesCache = [];
-
-        function loadDeliveryZones() {
-            fetch('/api/delivery')
-                .then(r => r.json())
-                .then(zones => {
-                    deliveryZonesCache = zones;
-                    // Populate region dropdown from unique regions
-                    const regionSel = document.getElementById('dz-filter-region');
-                    if (regionSel) {
-                        const regions = [...new Set(zones.map(z => z.region).filter(Boolean))].sort();
-                        regionSel.innerHTML = '<option value="">All Regions</option>'
-                            + regions.map(r => `<option value="${escAdm(r)}">${escAdm(r)}</option>`).join('');
-                    }
-                    renderDeliveryZoneList(zones);
-                })
-                .catch(() => { document.getElementById('dz-list').innerHTML = '<p class="text-xs text-red-400 py-4">Failed to load zones.</p>'; });
-        }
-
-        function filterDeliveryZones() {
-            const region = document.getElementById('dz-filter-region')?.value || '';
-            const filtered = region
-                ? deliveryZonesCache.filter(z => (z.region || '') === region)
-                : deliveryZonesCache;
-            renderDeliveryZoneList(filtered);
-        }
-
-        function renderDeliveryZoneList(zones) {
-            const list = document.getElementById('dz-list');
-            if (!zones.length) {
-                list.innerHTML = '<p class="text-sm text-gray-400 text-center py-8">No zones found.</p>';
-                return;
-            }
-            // Group by region
-            const grouped = {};
-            zones.forEach(z => {
-                const key = z.region || 'No Region';
-                if (!grouped[key]) grouped[key] = [];
-                grouped[key].push(z);
-            });
-            list.innerHTML = Object.entries(grouped).map(([region, regionZones]) => `
-                <div class="mb-4">
-                  <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2 px-1">${escAdm(region)}</p>
-                  ${regionZones.map(z => `
-                    <div id="dz-row-${z.id}" class="flex items-center justify-between py-3 px-3 rounded-xl hover:bg-gray-50 transition">
-                      <div>
-                        <p class="text-sm font-semibold text-gray-800">${escAdm(z.name)}</p>
-                        <div class="flex items-center gap-2 mt-0.5">
-                          ${z.region ? `<span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">${escAdm(z.region)}</span>` : ''}
-                        </div>
-                        ${z.address ? `<p class="text-xs text-gray-400 mt-0.5">📍 ${escAdm(z.address)}</p>` : ''}
-                      </div>
-                      <button onclick="deleteDeliveryZone('${escAdm(z.id)}')" class="text-xs text-red-400 hover:text-red-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0">✕ Remove</button>
-                    </div>`).join('')}
-                </div>`).join('');
-        }
-
-        function addDeliveryZone() {
-            const name    = document.getElementById('dz-name').value.trim();
-            const region  = document.getElementById('dz-region').value.trim();
-            const price   = document.getElementById('dz-price').value.trim();
-            const address = document.getElementById('dz-address').value.trim();
-            const msg     = document.getElementById('dz-msg');
-            if (!name || price === '') { msg.textContent = 'Please fill in zone name and price.'; msg.className = 'text-xs mt-3 text-red-500'; return; }
-            fetch('/api/delivery', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, region, price, address })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('dz-name').value = '';
-                    document.getElementById('dz-region').value = '';
-                    document.getElementById('dz-price').value = '';
-                    document.getElementById('dz-address').value = '';
-                    msg.textContent = '✓ Zone added!';
-                    msg.className = 'text-xs mt-3 text-green-600';
-                    loadDeliveryZones();
-                    showToast('Delivery zone added.');
-                } else {
-                    msg.textContent = data.message || 'Failed to add zone.';
-                    msg.className = 'text-xs mt-3 text-red-500';
-                }
-            });
-        }
-
-        function deleteDeliveryZone(id) {
-            requireAdminConfirm(
-                '🗑 Remove Delivery Zone',
-                'Customers will no longer see this zone at checkout.',
-                () => {
-                    fetch('/api/delivery/' + id, { method: 'DELETE' })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success) { loadDeliveryZones(); showToast('Zone removed.'); }
-                            else showToast(data.message || 'Failed to remove zone.', true);
-                        });
-                }
-            );
-        }
-
-        // ── GREATER ACCRA ZONE MAP ──────────────────────────────────────────
-        let zmData = { tiers: {}, areas: [] };
-
-        const ZM_COLORS = { '1': 'bg-blue-50 border-blue-200 text-blue-700', '2': 'bg-green-50 border-green-200 text-green-700', '3': 'bg-yellow-50 border-yellow-200 text-yellow-700', '4': 'bg-red-50 border-red-200 text-red-700' };
-        const ZM_BADGE  = { '1': 'bg-blue-100 text-blue-700', '2': 'bg-green-100 text-green-700', '3': 'bg-yellow-100 text-yellow-700', '4': 'bg-red-100 text-red-700' };
-
-        function zmCurrentRegion() {
-            return document.getElementById('rz-region-select')?.value || 'Greater Accra';
-        }
-
-        let _zmLoadSeq = 0;       // increments on every fetch — drops late responses
-        let _zmLoadedRegion = ''; // tracks which region zmData currently holds
-
-        function loadZoneMap() {
-            const region = zmCurrentRegion();
-            const seq = ++_zmLoadSeq;
-            fetch('/api/zone-map?region=' + encodeURIComponent(region))
-                .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-                .then(data => {
-                    if (seq !== _zmLoadSeq) return; // stale — a newer fetch won
-                    zmData = data;
-                    _zmLoadedRegion = region;
-                    zmRenderTiers();
-                    zmRenderAreas();
-                })
-                .catch(err => {
-                    if (seq !== _zmLoadSeq) return;
-                    showToast('Failed to load ' + region + ' zone map: ' + err.message, true);
-                });
-        }
-
-        function zmRenderTiers() {
-            const container = document.getElementById('zm-tier-cards');
-            if (!container) return;
-            // Delivery fees are negotiated with the customer on WhatsApp, not set here —
-            // these tiers just group areas for the address picker below.
-            container.innerHTML = Object.entries(zmData.tiers).map(([k, t]) => `
-              <div class="rounded-2xl border p-5 ${ZM_COLORS[k] || 'bg-gray-50 border-gray-200'}">
-                <p class="text-xs font-bold uppercase tracking-widest opacity-60">${escAdm(t.label)}</p>
-              </div>`).join('');
-        }
-
-        let zmAreasDraft = [];
-
-        function zmRenderAreas(areas) {
-            if (!areas) areas = zmData.areas;
-            zmAreasDraft = JSON.parse(JSON.stringify(areas));
-            const tbody = document.getElementById('zm-area-tbody');
-            if (!tbody) return;
-            if (!areas.length) { tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-400 text-sm">No areas yet — add one above.</td></tr>'; return; }
-            tbody.innerHTML = areas.map((a, i) => {
-                const realIdx = zmData.areas.findIndex(x => x.name === a.name);
-                return `<tr class="border-b border-gray-50 hover:bg-gray-50/50" data-zm-idx="${realIdx}">
-                  <td class="py-2.5 pr-4">
-                    <input type="text" value="${escAdm(a.name)}" data-field="name" data-idx="${realIdx}"
-                      onchange="zmEditArea(this)" class="w-full bg-transparent border-none text-sm text-gray-800 focus:outline-none focus:ring-1 focus:ring-orange-300 rounded px-1"/>
-                  </td>
-                  <td class="py-2.5 pr-4">
-                    <select data-field="zone" data-idx="${realIdx}" onchange="zmEditArea(this)"
-                      class="border border-gray-200 rounded-lg px-3 py-1 text-xs bg-white focus:outline-none focus:border-orange-400">
-                      ${[1,2,3,4].map(n=>`<option value="${n}" ${a.zone==n?'selected':''}>${zmData.tiers[n]?zmData.tiers[n].label:'Zone '+n}</option>`).join('')}
-                    </select>
-                  </td>
-                  <td class="py-2.5 text-right">
-                    <button onclick="zmDeleteArea(${realIdx})" class="text-xs text-red-400 hover:text-red-600 font-semibold px-2 py-1 rounded hover:bg-red-50 transition-colors">✕</button>
-                  </td>
-                </tr>`;
-            }).join('');
-        }
-
-        function zmEditArea(el) {
-            const idx = parseInt(el.dataset.idx);
-            const field = el.dataset.field;
-            if (zmData.areas[idx]) {
-                zmData.areas[idx][field] = el.value.trim();
-                zmSaveAreas();
-            }
-        }
-
-        function zmDeleteArea(idx) {
-            zmData.areas.splice(idx, 1);
-            zmSaveAreas(true);
-        }
-
-        function zmAddArea() {
-            zmData.areas.push({ name: 'New Area', zone: '1' });
-            zmSaveAreas(true);
-        }
-
-        function zmSaveAreas(rerender) {
-            // Guard: if zmData belongs to a different region (race during switch), don't save
-            if (_zmLoadedRegion && _zmLoadedRegion !== zmCurrentRegion()) {
-                showToast('Zone map still loading — please wait a moment.', true);
-                return;
-            }
-            fetch('/api/zone-map/areas', {
-                method: 'PUT',
-                headers: adminHeaders(),
-                body: JSON.stringify({ areas: zmData.areas, region: zmCurrentRegion() })
-            }).then(r => r.json()).then(d => {
-                if (d.success) {
-                    if (rerender) zmRenderAreas();
-                } else showToast(d.message || 'Save failed.', true);
-            });
-        }
-
-        function zmFilter() {
-            const q     = (document.getElementById('zm-search').value || '').toLowerCase();
-            const zone  = document.getElementById('zm-filter-zone').value;
-            const filtered = zmData.areas.filter(a =>
-                (!q    || a.name.toLowerCase().includes(q)) &&
-                (!zone || a.zone === zone)
-            );
-            zmRenderAreas(filtered);
-        }
-
-        // ── REGIONAL ZONE RATES ─────────────────────────────────────────────
-        let regionRatesCache = {};
-
-        function loadRegionRates() {
-            fetch('/api/region-rates')
-                .then(r => r.json())
-                .then(data => { regionRatesCache = data; })
-                .catch(() => {});
-        }
-
-        function rzLoadRegion() {
-            // All regions use the same detailed zone map panel
-            loadZoneMap();
-        }
-
         // ── CATEGORIES ──────────────────────────────────────────────────────
-        const CAT_ICONS = {
-            men: '👖', women: '👗', unisex: '🧦'
-        };
 
         let catsCache = [];
 
@@ -2257,7 +2019,7 @@
                 return;
             }
             list.innerHTML = cats.map((c, idx) => {
-                const icon = CAT_ICONS[c.name.toLowerCase()] || '🏷️';
+                const icon = escAdm((c.name || '?').charAt(0).toUpperCase());
                 const isFirst = idx === 0;
                 const isLast  = idx === cats.length - 1;
                 return `
@@ -2276,7 +2038,7 @@
                   <span class="w-6 text-center text-[11px] font-bold text-gray-300 flex-shrink-0">${idx + 1}</span>
 
                   <!-- Icon + name -->
-                  <span class="text-xl flex-shrink-0">${icon}</span>
+                  <span class="w-9 h-9 rounded-full bg-gray-100 text-gray-700 text-sm font-semibold flex items-center justify-center flex-shrink-0">${icon}</span>
                   <div class="flex-1 min-w-0">
                     <p class="text-sm font-semibold ${c.enabled ? 'text-gray-900' : 'text-gray-400 line-through'} truncate">${escAdm(c.name)}</p>
                     <p class="text-[10px] text-gray-400 font-medium">Shows as filter tab on the shop</p>
@@ -2372,7 +2134,7 @@
 
         function deleteCategory(name) {
             requireAdminConfirm(
-                '🗑 Delete Category',
+                'Delete Category',
                 `"${name}" will be removed. Products in this category will still exist but won't appear in filters.`,
                 () => {
                     fetch('/api/categories/' + encodeURIComponent(name), { method: 'DELETE' })
@@ -2405,7 +2167,7 @@
             const payBadge = ps === 'paid'
                 ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-600 border border-orange-100">✓ Paid</span>`
                 : ps === 'test'
-                ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">🧪 Test</span>`
+                ? `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">Test</span>`
                 : `<span class="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-gray-100 text-gray-500 border border-gray-200">✓ Paid</span>`;
 
             const date = new Date(o.paidAt).toLocaleString('en-GH', { dateStyle: 'full', timeStyle: 'short' });
@@ -2439,10 +2201,10 @@
                 </div>`;
 
             const fulfillmentBanner = o.fulfillmentAlert
-                ? `<div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-semibold">⚠️ Stock issue at time of payment: ${escAdm(o.fulfillmentAlert)} — stock was NOT deducted. Please review and resolve manually.</div>`
+                ? `<div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-xs text-red-700 font-semibold">Stock issue at time of payment: ${escAdm(o.fulfillmentAlert)} — stock was NOT deducted. Please review and resolve manually.</div>`
                 : '';
             const priceBanner = o.priceAlert
-                ? `<div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-semibold">💰 Price discrepancy: ${escAdm(o.priceAlert)} — this order was accepted but needs manual review.</div>`
+                ? `<div class="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 font-semibold">Price discrepancy: ${escAdm(o.priceAlert)} — this order was accepted but needs manual review.</div>`
                 : '';
 
             document.getElementById('od-body').innerHTML = `
@@ -2455,7 +2217,7 @@
                     <p class="text-xs text-gray-500">${escAdm((o.customer||{}).phone||"")}</p>
                     ${o.customer.email ? `<p class="text-xs text-gray-500">${escAdm(o.customer.email)}</p>` : ''}
                     <p class="text-xs text-gray-500 pt-0.5">${escAdm((o.customer||{}).address||"")}</p>
-                    ${o.customer.notes ? `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-2">💬 ${escAdm(o.customer.notes)}</p>` : ''}
+                    ${o.customer.notes ? `<p class="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 mt-2">${escAdm(o.customer.notes)}</p>` : ''}
                 </div>
 
                 <div>
@@ -2509,11 +2271,11 @@
             const raw = (o.customer.phone || '').replace(/\D/g, '');
             const waNum = raw.startsWith('0') ? '233' + raw.slice(1) : raw;
             const waBtn = waNum.length > 6
-                ? `<a href="https://wa.me/${waNum}" target="_blank" rel="noopener" class="flex-1 block text-center bg-gray-900 hover:bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-xl transition">📲 WhatsApp Customer</a>`
+                ? `<a href="${escAdm(invoiceWaUrl(o))}" target="_blank" rel="noopener" class="flex-1 block text-center bg-gray-900 hover:bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-xl transition">Send Invoice on WhatsApp</a>`
                 : `<p class="text-xs text-gray-400 text-center w-full py-2">No phone number on file</p>`;
             document.getElementById('od-footer').innerHTML = `
                 ${waBtn}
-                <button onclick="printOrderDoc('${o.id}')" class="flex-1 block text-center bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-sm font-semibold py-2.5 rounded-xl transition">⬇ Download Receipt</button>`;
+                <button onclick="printOrderDoc('${o.id}')" class="flex-1 block text-center bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-600 text-sm font-semibold py-2.5 rounded-xl transition">↓ Download Invoice</button>`;
 
             const backdrop = document.getElementById('order-drawer-backdrop');
             const drawer   = document.getElementById('order-drawer');
@@ -2727,7 +2489,7 @@
             };
             if (action === 'delete') {
                 requireAdminConfirm(
-                    '🗑 Bulk Delete Products',
+                    'Bulk Delete Products',
                     `Permanently delete ${ids.length} product${ids.length > 1 ? 's' : ''}? This cannot be undone.`,
                     doAction
                 );
@@ -2754,7 +2516,7 @@
             if (!entry) return;
             const name = entry.name || 'there';
             const product = entry.productName || entry.productId || 'the item';
-            const msg = `Hello ${name}! 🎉\n\nGreat news — *${product}* is back in stock at ${getStoreName()}!\n\nShop now before it sells out again 🧡\n— ${getStoreName()}`;
+            const msg = `Hello ${name}! \n\nGreat news — *${product}* is back in stock at ${getStoreName()}!\n\nShop now before it sells out again \n— ${getStoreName()}`;
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(msg).then(() => showToast('WhatsApp message copied to clipboard!')).catch(() => fallbackCopy(msg));
             } else { fallbackCopy(msg); }
@@ -2842,7 +2604,7 @@
                             datasets: [{
                                 label: 'Revenue (GH₵)',
                                 data: revenues,
-                                backgroundColor: 'rgba(232,98,26,.18)',
+                                backgroundColor: 'rgba(201,151,28,.18)',
                                 borderColor: '#C9971C',
                                 borderWidth: 2,
                                 borderRadius: 6,
@@ -3018,8 +2780,8 @@
                 const loId    = lo ? `<span class="font-mono text-[10px] text-gray-400">${escAdm(lo.id)}</span>` : '';
                 return `<tr class="data-row hover:bg-gray-50/50 transition">
                   <td class="py-3 px-4 text-sm font-semibold text-gray-800">${escAdm(c.name)}</td>
-                  <td class="py-3 px-4 text-xs text-gray-500"><a href="mailto:${escAdm(c.email)}" class="hover:underline">${escAdm(c.email)}</a></td>
-                  <td class="py-3 px-4 text-xs text-gray-500">${escAdm(c.phone || '—')}</td>
+                  <td class="py-3 px-4 text-xs text-gray-500">${c.phone ? `<a href="https://wa.me/${escAdm(String(c.phone).replace(/\D/g, '').replace(/^0/, '233'))}" target="_blank" rel="noopener" class="hover:underline">${escAdm(c.phone)}</a>` : '—'}</td>
+                  <td class="py-3 px-4 text-xs text-gray-500">${c.email ? `<a href="mailto:${escAdm(c.email)}" class="hover:underline">${escAdm(c.email)}</a>` : '—'}</td>
                   <td class="py-3 px-4 text-xs font-bold text-gray-700 text-center">${c.orderCount}</td>
                   <td class="py-3 px-4 text-xs font-bold text-orange-600">GH₵${c.totalSpent.toFixed(2)}</td>
                   <td class="py-3 px-4" style="min-width:180px">
@@ -3057,7 +2819,7 @@
                                   <span>${new Date(o.paidAt).toLocaleDateString('en-GH')}</span>
                                   <span>·</span>
                                   <span>${escAdm(o.status||'Pending')}</span>
-                                  ${o.trackingNumber ? `<span>· 🚚 ${escAdm(o.trackingNumber)}</span>` : ''}
+                                  ${o.trackingNumber ? `<span>· ${escAdm(o.trackingNumber)}</span>` : ''}
                                 </div>
                               </div>`).join('')}
                           </div>
@@ -3161,7 +2923,7 @@
                   <td class="py-3 px-4"><span class="w-2.5 h-2.5 rounded-full inline-block ${dot}"></span></td>
                   <td class="py-3 px-4">
                     <div class="flex items-center gap-2">
-                      <img src="${escAdm(p.image || '')}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#f3f4f6" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22%3E📦%3C/text%3E%3C/svg%3E'"/>
+                      <img src="${escAdm(p.image || '')}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#f3f4f6" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22%3E%3C/text%3E%3C/svg%3E'"/>
                       <div>
                         <p class="text-sm font-semibold text-gray-800">${escAdm(p.name)}</p>
                         ${hasVariants ? `<button onclick="toggleVariantRow('${escAdm(p.id)}')" class="text-[10px] text-orange-500 hover:underline font-semibold">Variants${variantCount ? ' (' + variantCount + ')' : ''}</button>` : ''}
@@ -3590,7 +3352,7 @@
 
         function deleteIntake(id) {
             requireAdminConfirm(
-                '🗑 Delete Intake',
+                'Delete Intake',
                 'This will remove the intake record. Note: stock levels will not be rolled back automatically.',
                 () => {
                     fetch('/api/stock-intakes/' + id, { method: 'DELETE' })
@@ -4306,7 +4068,7 @@
                 if (avail === null) {
                     stockInfo.className = 'inv-stock-info text-xs hidden block mb-1.5';
                 } else if (avail === 0) {
-                    stockInfo.textContent = '⚠ Out of stock';
+                    stockInfo.textContent = 'Out of stock';
                     stockInfo.className = 'inv-stock-info text-xs block mb-1.5 text-red-500 font-semibold';
                 } else {
                     stockInfo.textContent = avail + ' in stock';
@@ -4372,11 +4134,25 @@
             document.getElementById('inv-delivery-display').textContent = 'GH₵' + delivery.toFixed(2);
             document.getElementById('inv-discount-display').textContent = '−GH₵' + discount.toFixed(2);
             document.getElementById('inv-total-display').textContent    = 'GH₵' + total.toFixed(2);
+            const vb = vatBreakdown(total);
+            const vEl = document.getElementById('inv-vat-display');
+            if (vEl) vEl.textContent = 'GH₵' + (vb.inclusiveTotal - vb.base).toFixed(2);
         }
 
         // ── PDF / PRINT HELPERS ─────────────────────────────────────────────
         function getStoreName() {
             return document.getElementById('set-store-name')?.value?.trim() || 'Freeman Outlet';
+        }
+
+        // Ghana VAT (from 1 Jan 2026): VAT 15% + NHIL 2.5% + GETFund 2.5% = 20% on the
+        // VAT-exclusive amount; document totals are VAT-inclusive. Mirrors server.js.
+        function vatBreakdown(total) {
+            const t = Math.round((parseFloat(total) || 0) * 100) / 100;
+            const base = Math.round(t / 1.2 * 100) / 100;
+            const parts = [['VAT', 15], ['NHIL', 2.5], ['GETFund Levy', 2.5]].map(p => ({ label: p[0], rate: p[1], amount: Math.round(base * p[1]) / 100 }));
+            const drift = Math.round((t - base - parts.reduce((s, p) => s + p.amount, 0)) * 100) / 100;
+            parts[parts.length - 1].amount = Math.round((parts[parts.length - 1].amount + drift) * 100) / 100;
+            return { inclusiveTotal: t, base, parts, totalRate: 20 };
         }
 
         function generateDocHtml(order, docType) {
@@ -4388,6 +4164,9 @@
             const delivery     = parseFloat(order.deliveryPrice || 0);
             const discount     = parseFloat(order.promoDiscount || 0);
             const total        = parseFloat(order.total) || Math.max(0, subtotal + delivery - discount);
+            const showVat      = isInvoice || order.paymentStatus === 'manual' || order.vatInclusive === true;
+            const vat          = showVat ? (order.vat || vatBreakdown(total)) : null;
+            const tin          = document.getElementById('set-inv-tin')?.value?.trim() || '';
             const acctName     = document.getElementById('set-inv-account-name')?.value?.trim() || '';
             const acctNo       = document.getElementById('set-inv-account-no')?.value?.trim()   || '';
             const instagram    = document.getElementById('set-instagram')?.value?.trim() || '';
@@ -4416,10 +4195,10 @@
             <title>${docLabel} ${order.id || ''} — ${storeName}</title>
             <link rel="preconnect" href="https://fonts.googleapis.com">
             <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Sacramento&family=Jost:wght@400;600;700&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Sacramento&family=Work+Sans:wght@400;600;700&display=swap" rel="stylesheet">
             <style>
                 *{box-sizing:border-box;margin:0;padding:0}
-                body{font-family:'Jost',sans-serif;background:#f5f5f3;color:#222;font-size:14px;line-height:1.6;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:32px 16px}
+                body{font-family:'Work Sans',sans-serif;background:#f5f5f3;color:#222;font-size:14px;line-height:1.6;min-height:100vh;display:flex;justify-content:center;align-items:flex-start;padding:32px 16px}
                 @page{size:A4;margin:0}
                 @media print{
                     body{background:#fff;padding:0;display:block}
@@ -4446,6 +4225,9 @@
                 .totals-block{text-align:right;min-width:200px}
                 .totals-row{display:flex;justify-content:space-between;gap:48px;font-size:13px;color:#444;margin-bottom:6px}
                 .totals-label{font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:12px}
+                .vat-box{margin-top:14px;padding-top:10px;border-top:1px dashed #ccc}
+                .vat-title{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#888;margin-bottom:6px}
+                .vat-box .totals-row{font-size:12px;color:#666;margin-bottom:3px}
                 .totals-total{display:flex;justify-content:space-between;gap:48px;font-size:14px;font-weight:700;color:#111;margin-top:6px;padding-top:6px;border-top:1px solid #ccc}
                 .footer{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:24px;border-top:1px solid #e0e0e0}
                 .footer-logo img{height:56px;width:auto}
@@ -4467,6 +4249,7 @@
                         <div>${isInvoice ? 'Invoice' : 'Receipt'} No.: <span>${escAdm(String(order.id || ''))}</span></div>
                         ${!isInvoice && order.refInvoiceNo ? `<div>Ref. Invoice No.: <span>${escAdm(order.refInvoiceNo)}</span></div>` : ''}
                         <div>Date : <span>${dateStr}</span></div>
+                        ${tin ? `<div>TIN : <span>${escAdm(tin)}</span></div>` : ''}
                         ${!isInvoice ? `<div>Payment : <span>${escAdm(order.paymentStatus || '')}</span></div>` : ''}
                     </div>
                 </div>
@@ -4499,24 +4282,29 @@
                         <div class="totals-row"><span class="totals-label">Sub Total</span><span>GHS ${subtotal.toFixed(2)}</span></div>
                         ${delivery > 0 ? `<div class="totals-row"><span class="totals-label">Delivery</span><span>GHS ${delivery.toFixed(2)}</span></div>` : ''}
                         ${discount > 0 ? `<div class="totals-row"><span class="totals-label">Discount</span><span>−GHS ${discount.toFixed(2)}</span></div>` : ''}
-                        <div class="totals-total"><span class="totals-label">Total</span><span>GHS ${total.toFixed(2)}</span></div>
+                        <div class="totals-total"><span class="totals-label">${vat ? 'Total (VAT incl.)' : 'Total'}</span><span>GHS ${total.toFixed(2)}</span></div>
+                        ${vat ? `<div class="vat-box">
+                            <div class="vat-title">Total includes</div>
+                            <div class="totals-row"><span>Amount before VAT</span><span>GHS ${vat.base.toFixed(2)}</span></div>
+                            ${vat.parts.map(p => `<div class="totals-row"><span>${escAdm(p.label)} (${p.rate}%)</span><span>GHS ${p.amount.toFixed(2)}</span></div>`).join('')}
+                        </div>` : ''}
                     </div>
                 </div>
 
                 <div class="footer">
                     <div class="footer-logo">
-                        <img src="/images/logo.png" alt="${escAdm(storeName)}">
+                        <img src="/assets/images/logo.png" alt="${escAdm(storeName)}">
                     </div>
                     <div class="footer-thankyou">Thank You</div>
                     <div class="footer-socials">
-                        ${displayPhone ? `<div>${escAdm(displayPhone)} 📞</div>` : ''}
-                        ${snapchat  ? `<div>${escAdm(snapchat)} 👻</div>`  : ''}
-                        ${instagram ? `<div>${escAdm(instagram)} 📷</div>` : ''}
-                        ${tiktok    ? `<div>${escAdm(tiktok)} 🎵</div>`    : ''}
+                        ${displayPhone ? `<div>Tel: ${escAdm(displayPhone)}</div>` : ''}
+                        ${snapchat  ? `<div>Snapchat: ${escAdm(snapchat)}</div>`  : ''}
+                        ${instagram ? `<div>Instagram: ${escAdm(instagram)}</div>` : ''}
+                        ${tiktok    ? `<div>TikTok: ${escAdm(tiktok)}</div>`    : ''}
                     </div>
                 </div>
             </div>
-            <button class="print-btn no-print" onclick="window.print()">⬇ Save as PDF</button>
+            <button class="print-btn no-print" onclick="window.print()">↓ Save as PDF</button>
             <script>window.onload=function(){setTimeout(function(){window.print();},400);}<\/script>
             </body></html>`;
         }
@@ -4529,11 +4317,27 @@
             w.document.close();
         }
 
+        // WhatsApp message with a link to the public receipt/invoice page (the page
+        // checks the customer's phone, which is part of the link). wa.me cannot attach
+        // files, so a link the customer can open, print or save as PDF is the way.
+        function invoiceWaUrl(o) {
+            const c = (o && o.customer) || {};
+            const raw = String(c.phone || '').replace(/\D/g, '');
+            const num = raw.startsWith('0') ? '233' + raw.slice(1) : raw;
+            if (num.length < 7) return '';
+            const ref  = o.orderNo ? '#' + o.orderNo : o.id;
+            const link = location.origin + '/api/orders/' + encodeURIComponent(o.id) + '/receipt?phone=' + encodeURIComponent(num);
+            const msg  = 'Hello ' + (c.name || '') + ', thank you for shopping with ' + getStoreName() + '.\n\n'
+                + 'Invoice ' + ref + '\n'
+                + 'Total: GH₵' + parseFloat(o.total || 0).toFixed(2) + '\n\n'
+                + 'View or download your invoice here:\n' + link;
+            return 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg);
+        }
+
         function printOrderDoc(orderId) {
             const o = ordersCache.find(o => o.id === orderId);
             if (!o) return;
-            const docType = o.paymentStatus === 'manual' ? 'invoice' : 'receipt';
-            printDoc(generateDocHtml(o, docType));
+            printDoc(generateDocHtml(o, 'invoice'));
         }
 
         function downloadInvoiceForm() {
@@ -4645,6 +4449,7 @@
             const total    = Math.max(0, subtotal + delivery - discount);
             const order = {
                 id:            'RCT-' + Date.now(),
+                vatInclusive:  true,
                 refInvoiceNo:  refInv || '',
                 paidAt:        new Date().toISOString(),
                 paymentStatus: method,
@@ -4658,6 +4463,23 @@
             printDoc(generateDocHtml(order, 'receipt'));
         }
 
+        function showInvoiceWhatsApp(msgEl, order) {
+            const url = invoiceWaUrl(order);
+            const wrap = document.createElement('div');
+            wrap.className = 'mt-3';
+            if (url) {
+                const a = document.createElement('a');
+                a.href = url; a.target = '_blank'; a.rel = 'noopener';
+                a.className = 'inline-block bg-gray-900 hover:bg-orange-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition';
+                a.textContent = 'Send invoice to customer on WhatsApp';
+                wrap.appendChild(a);
+            } else {
+                wrap.className = 'mt-3 text-xs text-gray-400 font-normal';
+                wrap.textContent = "Add the customer's phone number to send the invoice on WhatsApp.";
+            }
+            msgEl.appendChild(wrap);
+        }
+
         async function submitManualInvoice(mode) {
             const name     = document.getElementById('inv-name').value.trim();
             const email    = document.getElementById('inv-email').value.trim();
@@ -4667,7 +4489,8 @@
             const invNum   = document.getElementById('inv-number').value.trim();
             const delivery = parseFloat(document.getElementById('inv-delivery').value) || 0;
 
-            if (!name || !email) return showToast('Customer name and email are required.', true);
+            if (!name) return showToast('Customer name is required.', true);
+            if ((mode === 'save_email' || mode === 'email_only') && !email) return showToast('Enter the customer\'s email to send the invoice by email.', true);
 
             const items = [];
             document.querySelectorAll('#inv-rows tr').forEach(tr => {
@@ -4743,8 +4566,10 @@
                     msgEl.textContent = data.emailError
                         ? 'Saved! (Email error: ' + data.emailError + ')'
                         : 'Invoice ' + data.order.id + ' saved and emailed to ' + email + '!';
+                    showInvoiceWhatsApp(msgEl, data.order);
                 } else {
                     msgEl.textContent = 'Invoice ' + data.order.id + ' saved to system.';
+                    showInvoiceWhatsApp(msgEl, data.order);
                 }
                 if (mode !== 'email_only') {
                     // Only reset form when something was saved
@@ -4824,6 +4649,7 @@
                     c('set-backup-on',        s.backupEnabled !== false);
                     v('set-inv-account-name', s.invoiceAccountName);
                     v('set-inv-account-no',   s.invoiceAccountNo);
+                    v('set-inv-tin',          s.invoiceTin);
                     // sync color picker ↔ hex input
                     if (cp && ch) {
                         cp.oninput = () => { ch.value = cp.value; };
@@ -4884,6 +4710,7 @@
                 backupEnabled:        gb('set-backup-on'),
                 invoiceAccountName:   g('set-inv-account-name'),
                 invoiceAccountNo:     g('set-inv-account-no'),
+                invoiceTin:           g('set-inv-tin'),
             };
             fetch('/api/settings', {
                 method: 'PUT',
@@ -4899,108 +4726,6 @@
             .finally(() => {
                 allBtns.forEach(b => { b.disabled = false; b.textContent = b.id === 'save-settings-btn' ? 'Save Settings' : 'Save All Settings'; });
             });
-        }
-
-        // ── EMAIL / NEWSLETTER ───────────────────────────────────────────────
-        function loadEmailTab() {
-            // Populate product dropdown for new-product announcements
-            fetch('/api/admin/all-products').then(r => r.json()).then(prods => {
-                const sel = document.getElementById('nl-product-select');
-                if (!sel) return;
-                sel.innerHTML = '<option value="">— Choose a product —</option>' +
-                    prods.map(p => `<option value="${escAdm(p.id)}">${escAdm(p.name)}</option>`).join('');
-            }).catch(() => {});
-        }
-
-        function getEmailRecipients() {
-            return Promise.all([
-                fetch('/api/orders').then(r => r.json()).catch(() => []),
-                fetch('/api/customers').then(r => r.json()).catch(() => [])
-            ]).then(function(results) {
-                const orders = results[0], customers = results[1];
-                const map = {};
-                orders.forEach(function(o) {
-                    if (o.customer && o.customer.email) {
-                        const e = o.customer.email.toLowerCase().trim();
-                        if (!map[e]) map[e] = o.customer.name || e;
-                    }
-                });
-                customers.forEach(function(c) {
-                    if (c.email) {
-                        const e = c.email.toLowerCase().trim();
-                        if (!map[e]) map[e] = c.name || e;
-                    }
-                });
-                return Object.entries(map).map(function(entry) { return { email: entry[0], name: entry[1] }; });
-            });
-        }
-
-        function sendNewsletter() {
-            const subject = document.getElementById('nl-subject').value.trim();
-            const message = document.getElementById('nl-message').value.trim();
-            if (!subject || !message) { showToast('Subject and message are required.', true); return; }
-            const btn = document.getElementById('nl-send-btn');
-            btn.disabled = true; btn.textContent = 'Fetching recipients…';
-            getEmailRecipients().then(function(recipients) {
-                if (!recipients.length) { showToast('No customers found to send to.', true); btn.disabled = false; btn.textContent = 'Send Newsletter'; return; }
-                btn.textContent = 'Sending to ' + recipients.length + ' recipients…';
-                const body = JSON.stringify({ subject, message, recipients });
-                return fetch('/api/admin/broadcast', {
-                    method: 'POST',
-                    headers: adminHeaders(),
-                    body
-                }).then(r => r.json());
-            }).then(function(d) {
-                if (!d) return;
-                if (d.success) {
-                    showToast('✓ Newsletter sent to ' + d.sent + ' customers' + (d.failed > 0 ? ' (' + d.failed + ' failed)' : '') + '!');
-                    document.getElementById('nl-subject').value = '';
-                    document.getElementById('nl-message').value = '';
-                } else showToast(d.message || 'Send failed.', true);
-            }).catch(function() { showToast('Network error.', true); })
-            .finally(function() { btn.disabled = false; btn.textContent = 'Send Newsletter'; });
-        }
-
-        function sendPromoBlast() {
-            const code  = document.getElementById('nl-promo-code').value.trim();
-            const extra = document.getElementById('nl-promo-message').value.trim();
-            if (!code) { showToast('Enter a promo code.', true); return; }
-            const btn = document.getElementById('nl-promo-btn');
-            btn.disabled = true; btn.textContent = 'Sending…';
-            getEmailRecipients().then(function(recipients) {
-                if (!recipients.length) { showToast('No customers found.', true); btn.disabled = false; btn.textContent = 'Send Promo Email'; return; }
-                return fetch('/api/admin/broadcast-promo', {
-                    method: 'POST',
-                    headers: adminHeaders(),
-                    body: JSON.stringify({ code, message: extra, recipients })
-                }).then(r => r.json());
-            }).then(function(d) {
-                if (!d) return;
-                if (d.success) showToast('✓ Promo blast sent to ' + d.sent + ' customers!');
-                else showToast(d.message || 'Send failed.', true);
-            }).catch(function() { showToast('Network error.', true); })
-            .finally(function() { btn.disabled = false; btn.textContent = 'Send Promo Email'; });
-        }
-
-        function sendProductAnnouncement() {
-            const productId = document.getElementById('nl-product-select').value;
-            const extra     = document.getElementById('nl-product-message').value.trim();
-            if (!productId) { showToast('Select a product.', true); return; }
-            const btn = document.getElementById('nl-product-btn');
-            btn.disabled = true; btn.textContent = 'Sending…';
-            getEmailRecipients().then(function(recipients) {
-                if (!recipients.length) { showToast('No customers found.', true); btn.disabled = false; btn.textContent = 'Send Announcement'; return; }
-                return fetch('/api/admin/broadcast-product', {
-                    method: 'POST',
-                    headers: adminHeaders(),
-                    body: JSON.stringify({ productId, message: extra, recipients })
-                }).then(r => r.json());
-            }).then(function(d) {
-                if (!d) return;
-                if (d.success) showToast('✓ Announcement sent to ' + d.sent + ' customers!');
-                else showToast(d.message || 'Send failed.', true);
-            }).catch(function() { showToast('Network error.', true); })
-            .finally(function() { btn.disabled = false; btn.textContent = 'Send Announcement'; });
         }
 
         // ── ADMIN ACCOUNTS ───────────────────────────────────────────────────
@@ -5046,8 +4771,8 @@
                     if (!note) {
                         note = document.createElement('div');
                         note.id = 'settings-role-note';
-                        note.style.cssText = 'background:#fff7f2;border:1px solid #fbd9c6;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e';
-                        note.textContent = '🔒 Some fields (bank account) are visible to the Owner only.';
+                        note.style.cssText = 'background:#FAF7EF;border:1px solid #E6D6AC;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#7D5D10';
+                        note.textContent = 'Some fields (bank account) are visible to the Owner only.';
                         var sec = document.getElementById('section-settings');
                         if (sec && sec.firstChild) sec.insertBefore(note, sec.firstChild);
                     }
@@ -5118,7 +4843,7 @@
             if (!inp) return;
             const show = inp.type === 'password';
             inp.type = show ? 'text' : 'password';
-            if (btn) btn.textContent = show ? '🙈' : '👁';
+            if (btn) btn.textContent = show ? 'Hide' : 'Show';
         }
 
         function createAdminAccount() {
@@ -5267,7 +4992,7 @@
 
         function deleteFaq(id) {
             requireAdminConfirm(
-                '🗑 Delete FAQ',
+                'Delete FAQ',
                 'This FAQ entry will be permanently removed from the storefront.',
                 () => {
                     fetch('/api/faqs/' + id, { method: 'DELETE' })
