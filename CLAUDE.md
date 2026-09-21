@@ -27,9 +27,11 @@ Apply the patterns, easing curves, spacing values, and component structures from
 
 ## Brand Rules (Non-negotiable)
 
-- **Never use green** for hover or accent states on customer-facing pages (`index.html`), except the WhatsApp button itself (WhatsApp's own green is fine there since it signals the platform).
-- Always use `var(--accent)` (`#C9971C`, gold/mustard) for interactive highlights, CTA buttons, focus rings, and hover underlines on the storefront. `var(--navy)` (`#0F2540`) is the primary dark/brand color (nav, headings, footer backgrounds).
-- Admin panel may use its own accent (orange) and green **only** for intentional semantic meaning (e.g. WhatsApp button, success badges) — it does not need to match the storefront's gold/navy theme.
+- The whole project (storefront + admin) is **black / white / gray with gold detail accents only**. No other hues except semantic red for errors.
+- **Never use green** for hover or accent states on customer-facing pages (`index.html`), except the WhatsApp button itself (`var(--wa)` / `var(--wa-dark)`, a deep WhatsApp teal-green that meets 4.5:1 with white text).
+- Use `var(--accent)` (`#C9971C`, gold) for interactive highlights, CTA buttons, focus rings, and hover underlines on the storefront; text on gold uses `var(--dark)` (`#1A1A1A`), never white. `var(--dark)`/`var(--navy)` (both `#1A1A1A`) are the primary dark color (nav, headings, footer).
+- Admin panel uses the same black/white/gray + gold palette (Tailwind config remaps `orange`/`amber` to a gold ramp); green only for intentional semantic meaning such as the WhatsApp button.
+- **No Quick View modal.** Tapping a product opens the full-screen product page (`#qv-overlay`, deep-linked as `/?p=<id>`, back button closes it). Ids/functions keep the `qv` prefix for historical reasons.
 - Brand fonts: **Oswald** (`var(--fh)`) for headings, **Work Sans** (`var(--fb)`) for body/UI.
 - Color tokens are defined in `:root` in `index.html` / `main.css`. Never hardcode hex values in component styles — including email templates in `server.js`, which should also pull from `settings.accentColor` where practical.
 

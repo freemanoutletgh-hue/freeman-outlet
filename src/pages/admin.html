@@ -357,6 +357,27 @@
                                 class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"></textarea>
                         </div>
 
+                        <!-- Fit & sizing / care notes (shown in collapsible sections on the product page) -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Fit &amp; Sizing notes <span class="normal-case font-normal text-gray-400">(optional)</span></label>
+                            <textarea id="form-fit" name="fitNotes" rows="2" maxlength="1000" placeholder="e.g. True to size. Size up if between sizes."
+                                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Care instructions <span class="normal-case font-normal text-gray-400">(optional — section hidden if empty)</span></label>
+                            <textarea id="form-care" name="careNotes" rows="2" maxlength="1000" placeholder="e.g. Machine wash cold. Do not bleach."
+                                class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition"></textarea>
+                        </div>
+
+                        <!-- Bundle offers -->
+                        <div>
+                            <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Bundle offers <span class="normal-case font-normal text-gray-400">(optional)</span></label>
+                            <p class="text-[11px] text-gray-400 mb-2">e.g. 3 pieces for GH₵690. Applies automatically when a customer has that many of this product in their cart (any sizes/colours). The price must be lower than the single price × pieces.</p>
+                            <div id="bundle-rows" class="space-y-2"></div>
+                            <input type="hidden" id="form-bundles" name="bundlesJson" value="">
+                            <button type="button" onclick="addBundleRow()" class="mt-2 text-xs font-semibold text-gray-700 border border-gray-300 hover:border-gray-900 rounded-lg px-3 py-1.5 transition">+ Add bundle offer</button>
+                        </div>
+
                         <button type="submit" id="submit-btn"
                             class="w-full bg-gray-900 hover:bg-black text-white text-sm font-semibold py-3 rounded-xl transition shadow-md">
                             Publish Product

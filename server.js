@@ -88,6 +88,53 @@ if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 function vColor(v) { return typeof v === 'object' && v ? (v.color || '') : String(v || ''); }
 function variantColors(variants) { return (variants || []).map(vColor).filter(Boolean); }
 
+// ── BUNDLE PRICING ───────────────────────────────────────────────────────────
+// A product can carry bundle offers ("3 pieces for GH₵690"). They are read
+// through productBundles() only, so an offer that stops being a genuine saving
+// (e.g. the unit price is later lowered) silently stops applying. Quantities
+// are pooled per product across colour/size lines, largest bundle first.
+const BUNDLE_TAGS = ['Recommended', 'Popular choice', 'Best value'];
+function cleanBundles(raw) {
+    let arr = raw;
+    if (typeof raw === 'string') { try { arr = JSON.parse(raw); } catch (e) { arr = []; } }
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set();
+    const out = [];
+    for (const b of arr) {
+        const qty = Math.floor(Number(b && b.qty));
+        const price = Math.round(Number(b && b.price) * 100) / 100;
+        if (!(qty >= 2 && qty <= 100) || !(price > 0) || seen.has(qty)) continue;
+        seen.add(qty);
+        out.push({ qty, price, tag: BUNDLE_TAGS.includes(b.tag) ? b.tag : '' });
+        if (out.length >= 6) break;
+    }
+    return out.sort((a, b) => a.qty - b.qty);
+}
+function productBundles(p) {
+    const unit = parseFloat(p && p.price) || 0;
+    return cleanBundles(p && p.bundles).filter(b => b.price < b.qty * unit).sort((a, b) => b.qty - a.qty);
+}
+function bundleDiscountFor(cartItems) {
+    const qtyById = {};
+    for (const item of cartItems) {
+        const q = Math.max(1, Math.floor(parseFloat(item.quantity)) || 1);
+        qtyById[item.id] = (qtyById[item.id] || 0) + q;
+    }
+    let discount = 0;
+    for (const id of Object.keys(qtyById)) {
+        const p = products.find(x => x.id === id);
+        if (!p) continue;
+        const unit = parseFloat(p.price) || 0;
+        let rem = qtyById[id], bundled = 0;
+        for (const t of productBundles(p)) {
+            const n = Math.floor(rem / t.qty);
+            if (n) { bundled += n * t.price; rem -= n * t.qty; }
+        }
+        discount += qtyById[id] * unit - (bundled + rem * unit);
+    }
+    return Math.round(discount * 100) / 100;
+}
+
 // Escape user-controlled text before it's interpolated into server-rendered
 // HTML (receipts, emails) — mirrors escHtml() in storefront.js / escAdm() in
 // admin.js. Item names/customer fields are never trusted verbatim here.
@@ -637,7 +684,7 @@ const uploadProduct = upload.fields([
 // ── PRODUCTS ───────────────────────────────────────────────────────────────
 
 // GET: All products — strip internal fields before sending to storefront
-const PUBLIC_PRODUCT_FIELDS = ['id','name','price','originalPrice','category','desc','image','images','variants','sizes','stock','variantStock','isSoldOut','featured','createdAt','updatedAt'];
+const PUBLIC_PRODUCT_FIELDS = ['id','name','price','originalPrice','category','desc','image','images','variants','sizes','stock','variantStock','isSoldOut','featured','createdAt','updatedAt','bundles','fitNotes','careNotes'];
 app.get('/api/products', (req, res) => {
     const pub = products
         .filter(p => p.isListed !== false)
@@ -676,7 +723,7 @@ async function optimiseUploadedFiles(files, fields) {
 
 // POST: Add product
 app.post('/api/products', requireAdminJWT, uploadProduct, async (req, res) => {
-    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut } = req.body;
+    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut, bundlesJson, fitNotes, careNotes } = req.body;
     const DEFAULT_IMG = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500";
 
     const uploadedImages = await optimiseUploadedFiles(req.files, ['productImage','productImage2','productImage3','productImage4']);
@@ -700,6 +747,9 @@ app.post('/api/products', requireAdminJWT, uploadProduct, async (req, res) => {
             originalPrice: storedOrig,
             category: category || "",
             desc,
+            fitNotes: String(fitNotes || '').slice(0, 1000),
+            careNotes: String(careNotes || '').slice(0, 1000),
+            bundles: cleanBundles(bundlesJson),
             image: imageUrl,
             images,
             variants: variantArray,
@@ -738,7 +788,7 @@ app.put('/api/products/sort-order', requireAdminJWT, (req, res) => {
 // PUT: Update product
 app.put('/api/products/:id', requireAdminJWT, uploadProduct, async (req, res) => {
     const { id } = req.params;
-    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut } = req.body;
+    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut, bundlesJson, fitNotes, careNotes } = req.body;
 
     const idx = products.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ success: false, message: "Product not found" });
@@ -790,6 +840,9 @@ app.put('/api/products/:id', requireAdminJWT, uploadProduct, async (req, res) =>
     }
     if (category !== undefined) product.category = category;
     if (desc !== undefined) product.desc = desc;
+    if (fitNotes !== undefined)  product.fitNotes  = String(fitNotes).slice(0, 1000);
+    if (careNotes !== undefined) product.careNotes = String(careNotes).slice(0, 1000);
+    if (bundlesJson !== undefined) product.bundles = cleanBundles(bundlesJson);
     if (isSoldOut !== undefined) product.isSoldOut = (isSoldOut === true || isSoldOut === 'true');
     if (req.body.isListed !== undefined) product.isListed = (req.body.isListed === true || req.body.isListed === 'true');
     if (variants !== undefined) product.variants = variants.split(',').map(i => i.trim()).filter(Boolean);
@@ -1174,6 +1227,8 @@ app.post('/api/whatsapp-order', (req, res) => {
     // that endpoint's checks are only a checkout-time preview and are not
     // otherwise enforced here, so expiry/usage-limit/minimum-order must be
     // re-checked at the point the order is actually recorded.
+    const serverBundleDiscount = Math.min(serverSubtotal, bundleDiscountFor(cartItems));
+    const subtotalAfterBundles = serverSubtotal - serverBundleDiscount;
     let serverDiscount = 0;
     let appliedPromoCode = null;
     if (promoCode) {
@@ -1182,17 +1237,17 @@ app.post('/api/whatsapp-order', (req, res) => {
         const codeValid = code
             && !(code.expiresAt && now > code.expiresAt)
             && !(code.maxUses && promoUsageCount(code.code) >= code.maxUses)
-            && !(code.minOrder && serverSubtotal < code.minOrder);
+            && !(code.minOrder && subtotalAfterBundles < code.minOrder);
         if (codeValid) {
             appliedPromoCode = code.code;
             serverDiscount = code.type === 'percent'
-                ? Math.min(serverSubtotal, Math.round(serverSubtotal * code.value) / 100)
-                : Math.min(code.value, serverSubtotal);
+                ? Math.min(subtotalAfterBundles, Math.round(subtotalAfterBundles * code.value) / 100)
+                : Math.min(code.value, subtotalAfterBundles);
         }
     }
     // Always 0 — see comment above. Any deliveryPrice the client sends is ignored.
     const serverDelivery = 0;
-    const serverTotal = Math.max(0, serverSubtotal + serverDelivery - serverDiscount);
+    const serverTotal = Math.max(0, subtotalAfterBundles + serverDelivery - serverDiscount);
 
     const order = {
         id: 'ORD-' + Date.now(),
@@ -1210,6 +1265,7 @@ app.post('/api/whatsapp-order', (req, res) => {
             return { ...item, name: p.name, price: parseFloat(p.price), quantity: qty };
         }),
         subtotal: serverSubtotal,
+        bundleDiscount: serverBundleDiscount,
         promoCode: appliedPromoCode,
         promoDiscount: serverDiscount,
         deliveryZone: deliveryZone || null,
@@ -1633,7 +1689,7 @@ const SOCIAL_LINKS_HTML = `
 async function sendConfirmationEmail(order) {
     if (!GMAIL_PASS) { console.error('[EMAIL SKIP] GMAIL_PASS not set — no email sent for order', order.id); return; }
     if (!GMAIL_USER || GMAIL_USER.includes('REPLACE')) return;
-    const { customer, items, total, id, orderNo, paidAt, promoCode, promoDiscount, subtotal, deliveryZone, deliveryArea, deliveryPrice, deliveryAddress } = order;
+    const { customer, items, total, id, orderNo, paidAt, promoCode, promoDiscount, bundleDiscount, subtotal, deliveryZone, deliveryArea, deliveryPrice, deliveryAddress } = order;
     const displayId = orderNo ? '#' + orderNo : id;
     // Build a human-readable delivery label: prefer area name, fallback to zone
     const deliveryLabel = deliveryArea ? escHtml(deliveryArea) + (deliveryZone ? ' · ' + escHtml(deliveryZone) : '') : (deliveryZone ? escHtml(deliveryZone) : null);
@@ -1701,7 +1757,7 @@ async function sendConfirmationEmail(order) {
       <td></td>
       <td style="padding:4px 40px 20px;width:220px">
         <table width="100%" cellpadding="0" cellspacing="0">
-          ${(deliveryPrice > 0 || promoCode) ? `
+          ${(deliveryPrice > 0 || promoCode || bundleDiscount > 0) ? `
           <tr>
             <td style="padding:10px 0 6px;font-size:13px;color:#777;border-top:1px solid #e8e0d8">Items Sub Total</td>
             <td style="padding:10px 0 6px;text-align:right;font-size:13px;color:#777;border-top:1px solid #e8e0d8">GH₵${(subtotal || 0).toFixed(2)}</td>
@@ -1713,6 +1769,11 @@ async function sendConfirmationEmail(order) {
               ${customer.address ? '<br><span style="font-size:11px;color:#aaa">' + customer.address + '</span>' : ''}
             </td>
             <td style="padding:4px 0;text-align:right;font-size:13px;vertical-align:top;${deliveryPrice > 0 ? 'color:#555' : 'color:#16a34a'}">${deliveryPrice > 0 ? 'GH₵' + parseFloat(deliveryPrice).toFixed(2) : 'Free'}</td>
+          </tr>` : ''}
+          ${bundleDiscount > 0 ? `
+          <tr>
+            <td style="padding:4px 0 8px;font-size:13px;color:#16a34a">Bundle savings</td>
+            <td style="padding:4px 0 8px;text-align:right;font-size:13px;color:#16a34a">−GH₵${parseFloat(bundleDiscount).toFixed(2)}</td>
           </tr>` : ''}
           ${promoCode && promoDiscount ? `
           <tr>
@@ -1824,7 +1885,7 @@ async function sendConfirmationEmail(order) {
       </tr></thead>
       <tbody>${ownerRowsHtml}</tbody>
       <tfoot>
-        ${(deliveryPrice > 0 || promoCode) ? `
+        ${(deliveryPrice > 0 || promoCode || bundleDiscount > 0) ? `
         <tr>
           <td colspan="2" style="padding:10px 0 4px;font-size:13px;color:#777;border-top:1px solid #e8e0d8">Items Sub Total</td>
           <td style="padding:10px 0 4px;text-align:right;font-size:13px;color:#777;border-top:1px solid #e8e0d8">GH₵${(subtotal || 0).toFixed(2)}</td>
@@ -1833,6 +1894,11 @@ async function sendConfirmationEmail(order) {
         <tr>
           <td colspan="2" style="padding:4px 0;font-size:13px;color:#555">Delivery — ${deliveryArea || deliveryZone || ''}${deliveryArea && deliveryZone ? '<br><span style="font-size:11px;color:#aaa">'+deliveryZone+'</span>' : ''}</td>
           <td style="padding:4px 0;text-align:right;font-size:13px;vertical-align:top;${deliveryPrice > 0 ? 'color:#555' : 'color:#16a34a'}">${deliveryPrice > 0 ? 'GH₵'+parseFloat(deliveryPrice).toFixed(2) : 'Free'}</td>
+        </tr>` : ''}
+        ${bundleDiscount > 0 ? `
+        <tr>
+          <td colspan="2" style="padding:4px 0 8px;font-size:13px;color:#16a34a">Bundle savings</td>
+          <td style="padding:4px 0 8px;text-align:right;font-size:13px;color:#16a34a">−GH₵${parseFloat(bundleDiscount).toFixed(2)}</td>
         </tr>` : ''}
         ${promoCode && promoDiscount ? `
         <tr>
@@ -2640,6 +2706,7 @@ app.post('/api/products/:id/duplicate', requireAdminJWT, (req, res) => {
         variants: Array.isArray(orig.variants) ? orig.variants.map(v => typeof v === 'object' && v ? { ...v } : v) : orig.variants,
         images: Array.isArray(orig.images) ? [...orig.images] : orig.images,
         sizes: Array.isArray(orig.sizes) ? [...orig.sizes] : orig.sizes,
+        bundles: Array.isArray(orig.bundles) ? orig.bundles.map(b => ({ ...b })) : orig.bundles,
         variantStock: orig.variantStock ? { ...orig.variantStock } : orig.variantStock
     };
     products.push(clone);
@@ -3010,8 +3077,9 @@ app.delete('/api/orders/:id', requireAdminJWT, requireManagerOrOwner, async (req
     <p style="margin:0 0 16px;font-size:13px;color:#1a1a1a;line-height:1.6">${escHtml(order.customer.name)} · ${escHtml(order.customer.phone)} · ${escHtml(order.customer.email)}<br>${escHtml(order.customer.address)}${order.customer.notes ? '<br><em style="color:#aaa">' + escHtml(order.customer.notes) + '</em>' : ''}</p>
     <p style="margin:0 0 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#aaa">Items</p>
     <table width="100%" cellpadding="0" cellspacing="0" style="font-size:13px;margin-bottom:14px">${itemRows}</table>
-    ${(order.deliveryPrice > 0 || order.promoCode) ? `<p style="margin:0 0 4px;font-size:13px;text-align:right;color:#777">Items Sub Total: GH₵${parseFloat(order.subtotal || 0).toFixed(2)}</p>` : ''}
+    ${(order.deliveryPrice > 0 || order.promoCode || order.bundleDiscount > 0) ? `<p style="margin:0 0 4px;font-size:13px;text-align:right;color:#777">Items Sub Total: GH₵${parseFloat(order.subtotal || 0).toFixed(2)}</p>` : ''}
     ${order.deliveryZone ? `<p style="margin:0 0 4px;font-size:13px;text-align:right;color:#555">Delivery (${escHtml(order.deliveryZone)}): ${order.deliveryPrice > 0 ? 'GH₵' + parseFloat(order.deliveryPrice).toFixed(2) : 'Free'}</p>` : ''}
+    ${order.bundleDiscount > 0 ? `<p style="margin:0 0 4px;font-size:13px;text-align:right;color:#16a34a">Bundle savings: −GH₵${parseFloat(order.bundleDiscount).toFixed(2)}</p>` : ''}
     ${order.promoCode && order.promoDiscount ? `<p style="margin:0 0 4px;font-size:13px;text-align:right;color:#16a34a">Discount (${order.promoCode}): −GH₵${parseFloat(order.promoDiscount).toFixed(2)}</p>` : ''}
     <p style="margin:0;font-size:15px;font-weight:800;text-align:right;color:#C9971C">Total: GH₵${parseFloat(order.total).toFixed(2)}</p>
   </div>
@@ -3286,6 +3354,7 @@ th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;lette
   <tbody>${itemRows}</tbody>
   <tfoot>
     ${parseFloat(order.deliveryPrice||0)>0?`<tr><td colspan="2" style="padding:8px 0;color:#555">Delivery${order.deliveryArea?' — '+escHtml(order.deliveryArea):''}</td><td style="padding:8px 0;text-align:right">GH₵${parseFloat(order.deliveryPrice).toFixed(2)}</td></tr>`:''}
+    ${parseFloat(order.bundleDiscount||0)>0?`<tr><td colspan="2" style="padding:8px 0;color:#16a34a">Bundle savings</td><td style="padding:8px 0;text-align:right;color:#16a34a">−GH₵${parseFloat(order.bundleDiscount).toFixed(2)}</td></tr>`:''}
     ${parseFloat(order.promoDiscount||0)>0?`<tr><td colspan="2" style="padding:8px 0;color:#16a34a">Discount</td><td style="padding:8px 0;text-align:right;color:#16a34a">−GH₵${parseFloat(order.promoDiscount).toFixed(2)}</td></tr>`:''}
     <tr class="total-row"><td colspan="2">Total Paid</td><td style="text-align:right">GH₵${parseFloat(order.total||0).toFixed(2)}</td></tr>
   </tfoot></table>

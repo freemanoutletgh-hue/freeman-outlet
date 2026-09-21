@@ -1138,6 +1138,9 @@
             document.getElementById('form-original-price').value = product.originalPrice || '';
             document.getElementById('form-category').value = product.category || '';
             document.getElementById('form-desc').value = product.desc || '';
+            document.getElementById('form-fit').value  = product.fitNotes  || '';
+            document.getElementById('form-care').value = product.careNotes || '';
+            setBundleRows(product.bundles);
             adminSelectedSizes = new Set(product.sizes || []);
             updateSizeSuggestions(adminSelectedSizes.size === 0);
 
@@ -1447,6 +1450,7 @@
 
         function resetForm() {
             document.getElementById('product-form').reset();
+            setBundleRows([]);
             document.getElementById('form-name').value = '';
             removeSelectedImagePreview();
             clearAllExtraImgs();
@@ -1570,7 +1574,63 @@
             finally { btn.disabled = false; btn.textContent = 'Publish Product'; }
         }
 
+        // ── BUNDLE OFFER EDITOR ────────────────────────────────────────────
+        const BUNDLE_TAG_OPTIONS = ['', 'Recommended', 'Popular choice', 'Best value'];
+        function addBundleRow(b) {
+            b = b || {};
+            const rows = document.getElementById('bundle-rows');
+            if (!rows || rows.children.length >= 6) return;
+            const row = document.createElement('div');
+            row.className = 'bundle-row border border-gray-200 rounded-xl p-2.5 bg-gray-50';
+            row.innerHTML =
+                '<div class="grid grid-cols-[70px_1fr_1fr_28px] gap-2 items-center">'
+                + '<input type="number" min="2" max="100" step="1" placeholder="Pcs" class="b-qty w-full px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white" value="' + escAdm(b.qty || '') + '">'
+                + '<input type="number" min="0" step="0.01" placeholder="Total GH₵" class="b-price w-full px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white" value="' + escAdm(b.price || '') + '">'
+                + '<select class="b-tag w-full px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white">'
+                + BUNDLE_TAG_OPTIONS.map(t => '<option value="' + escAdm(t) + '"' + (t === (b.tag || '') ? ' selected' : '') + '>' + (t ? escAdm(t) : 'No tag') + '</option>').join('')
+                + '</select>'
+                + '<button type="button" class="b-del text-gray-400 hover:text-red-600 text-lg leading-none" aria-label="Remove bundle offer">&times;</button>'
+                + '</div><p class="b-hint text-[11px] text-gray-500 mt-1.5"></p>';
+            row.addEventListener('input', () => { syncBundlesJson(); updateBundleHints(); });
+            row.querySelector('.b-del').addEventListener('click', () => { row.remove(); syncBundlesJson(); });
+            rows.appendChild(row);
+            syncBundlesJson(); updateBundleHints();
+        }
+        function readBundleRows() {
+            return Array.from(document.querySelectorAll('#bundle-rows .bundle-row')).map(r => ({
+                qty: parseInt(r.querySelector('.b-qty').value, 10),
+                price: parseFloat(r.querySelector('.b-price').value),
+                tag: r.querySelector('.b-tag').value
+            })).filter(b => b.qty >= 2 && b.price > 0);
+        }
+        function syncBundlesJson() {
+            const el = document.getElementById('form-bundles');
+            if (el) el.value = JSON.stringify(readBundleRows());
+        }
+        function updateBundleHints() {
+            const unit = parseFloat(document.getElementById('form-price').value) || 0;
+            document.querySelectorAll('#bundle-rows .bundle-row').forEach(r => {
+                const q = parseInt(r.querySelector('.b-qty').value, 10), p = parseFloat(r.querySelector('.b-price').value);
+                const hint = r.querySelector('.b-hint');
+                if (!(q >= 2) || !(p > 0)) { hint.textContent = ''; hint.className = 'b-hint text-[11px] text-gray-500 mt-1.5'; return; }
+                if (unit > 0 && p >= q * unit) {
+                    hint.textContent = 'Not a saving — must be less than ' + q + ' × GH₵' + unit.toFixed(2) + ' = GH₵' + (q * unit).toFixed(2) + '. It will be ignored on the store.';
+                    hint.className = 'b-hint text-[11px] text-red-600 mt-1.5';
+                } else {
+                    hint.textContent = 'About GH₵' + (p / q).toFixed(2) + ' per piece' + (unit > 0 ? ' · customer saves GH₵' + (q * unit - p).toFixed(2) : '');
+                    hint.className = 'b-hint text-[11px] text-gray-500 mt-1.5';
+                }
+            });
+        }
+        function setBundleRows(list) {
+            const rows = document.getElementById('bundle-rows');
+            if (rows) rows.innerHTML = '';
+            (list || []).forEach(addBundleRow);
+            syncBundlesJson();
+        }
+
         function updateDiscountPreview() {
+            updateBundleHints();
             const price = parseFloat(document.getElementById('form-price').value);
             const orig  = parseFloat(document.getElementById('form-original-price').value);
             const box   = document.getElementById('discount-preview');

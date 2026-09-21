@@ -205,7 +205,7 @@
     <p class="hero-sub" id="hero-sub">Fruit of the Loom undershirts, boxers, unisex socks &amp; ladies' panties — genuine stock, honest prices, delivered anywhere in Ghana.</p>
     <div class="hero-btns">
       <button class="hero-btn-p" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shop Now </button>
-      <a href="https://wa.me/" target="_blank" rel="noopener" class="hero-btn-o" id="hero-wa-btn">Contact Us</a>
+      <a href="https://wa.me/" target="_blank" rel="noopener" class="hero-btn-o" id="hero-wa-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M5.077 20.95l.286-1.048C4.002 18.726 3 16.455 3 14.002 3 8.478 7.477 4 13 4s10 4.478 10 10.002c0 5.523-4.477 10.002-10 10.002-1.68 0-3.26-.427-4.642-1.178L5.077 20.95zM13 2C6.373 2 1 7.373 1 14.002c0 2.392.71 4.624 1.93 6.488L1.05 22.95 4.62 22.05C6.412 23.002 8.645 23.54 11 23.54c.674 0 1.333-.057 1.973-.167C19.14 22.36 24 18.546 24 14.002 24 7.373 19.627 2 13 2z"/></svg> Send us a WhatsApp</a>
     </div>
   </div>
 
@@ -631,6 +631,10 @@
       <div class="fd-bar-msg" id="fd-bar-msg"></div>
       <div class="fd-track"><div class="fd-fill" id="fd-fill" style="width:0%"></div></div>
     </div>
+    <div class="cart-subtotal cart-bundle-line" id="cart-bundle-line" style="display:none">
+      <span>Bundle savings</span>
+      <strong id="cart-bundle-amt"></strong>
+    </div>
     <div class="cart-subtotal">
       <span>Subtotal</span>
       <strong id="cart-total">GH₵0.00</strong>
@@ -653,6 +657,10 @@
       <div class="order-summary">
         <h4>Order Summary</h4>
         <div id="checkout-items"></div>
+        <div class="summary-discount" id="checkout-bundle-line" style="display:none">
+          <span>Bundle savings</span>
+          <span id="checkout-bundle-amt"></span>
+        </div>
         <div class="summary-discount" id="promo-discount-line" style="display:none">
           <span>Discount (<span id="promo-code-lbl"></span>)</span>
           <span id="promo-disc-amt"></span>
@@ -703,12 +711,37 @@
   </div>
 </div>
 
-<!-- QUICK VIEW MODAL -->
-<div id="qv-overlay" onclick="if(event.target===this)closeQV()">
-  <div class="qv-modal">
+<!-- PRODUCT PAGE (full-screen; opened from any product card, deep-linked as /?p=<id>) -->
+<div id="qv-overlay">
+  <div class="qv-modal" role="dialog" aria-modal="true" aria-labelledby="qv-name">
     <button class="qv-x" onclick="closeQV()" aria-label="Close">✕</button>
+
+    <!-- Product-page header (mobile only): stays pinned while the page scrolls -->
+    <div class="qv-topcard">
+      <button class="qv-topcard-x" onclick="closeQV()" aria-label="Close">✕</button>
+      <h2 class="qv-top-title" id="qv-top-title"></h2>
+      <p class="qv-top-sub" id="qv-top-sub"></p>
+      <div class="qv-top-btns">
+        <button class="qv-top-btn" onclick="qvScrollToOptions()">Choose size &amp; colour</button>
+        <span class="qv-top-chip" id="qv-top-chip"></span>
+      </div>
+    </div>
+
     <div class="qv-left">
-      <div class="qv-main-wrap"><img id="qv-main-img" src="" alt="" onerror="this.src='https://images.unsplash.com/photo-1737094540182-d602f8a7dd1d?w=800';this.onerror=null"></div>
+      <div class="qv-main-wrap" id="qv-main-wrap">
+        <img id="qv-main-img" src="" alt="" onerror="this.src='https://images.unsplash.com/photo-1737094540182-d602f8a7dd1d?w=800';this.onerror=null">
+        <span class="qv-counter" id="qv-counter" hidden></span>
+        <button class="qv-arrow qv-prev" id="qv-prev" onclick="qvNav(-1)" aria-label="Previous photo" hidden>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="qv-arrow qv-next" id="qv-next" onclick="qvNav(1)" aria-label="Next photo" hidden>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+        <div class="qv-caption" aria-live="polite">
+          <span class="qv-caption-lbl">Genuine Fruit of the Loom</span>
+          <span class="qv-caption-name" id="qv-caption-name"></span>
+        </div>
+      </div>
       <div class="qv-thumbs" id="qv-thumbs"></div>
     </div>
     <div class="qv-right">
@@ -720,6 +753,7 @@
         <span id="qv-stock-note" class="qv-stock-note qv-stock-ok" style="display:none"></span>
       </div>
       <div class="qv-divider"></div>
+      <div id="qv-options">
       <div id="qv-sizes"></div>
       <div id="qv-colors"></div>
       <div class="qv-qty-row">
@@ -730,11 +764,18 @@
           <button class="qty-btn" onclick="qvQty(1)">+</button>
         </div>
       </div>
-      <p class="qv-desc" id="qv-desc"></p>
+      </div>
+      <div class="qv-bundles" id="qv-bundles" style="display:none"></div>
       <div class="qv-btns">
         <button class="qv-btn-cart" id="qv-btn-cart" onclick="qvAddCart()">&#128722; Add to Cart</button>
         <button class="qv-btn-wa" id="qv-btn-wa" onclick="qvOrderWA()">&#128172; WhatsApp Order</button>
       </div>
+      <ul class="qv-trust" aria-label="Ordering promises">
+        <li>Pay on delivery</li>
+        <li>Genuine Fruit of the Loom</li>
+        <li>Order via WhatsApp</li>
+      </ul>
+      <div class="qv-info" id="qv-info"></div>
       <div style="display:flex;align-items:center;justify-content:space-between;padding-top:8px;border-top:1px solid var(--border)">
         <button id="qv-wishlist-btn" onclick="qvToggleWishlist()" style="background:none;border:none;font-size:18px;cursor:pointer;color:#ccc;transition:color .2s" title="Save to wishlist" aria-label="Save to wishlist" aria-pressed="false">♡</button>
         <button onclick="qvShareWA()" style="background:none;border:none;font-size:12px;font-weight:600;color:#888;cursor:pointer;font-family:var(--fb);display:flex;align-items:center;gap:5px;transition:color .2s" onmouseover="this.style.color='#25d366'" onmouseout="this.style.color='#888'">
@@ -747,6 +788,18 @@
         <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:12px">You might also like</p>
         <div id="qv-upsell-grid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px"></div>
       </div>
+    </div>
+
+    <div class="qv-contact">
+      <div class="qv-contact-logo"><img src="/assets/images/logo.png" alt="" width="46" height="46" onerror="this.parentNode.style.display='none'"></div>
+      <div class="qv-contact-info">
+        <span class="qv-contact-name" id="qv-contact-name">Freeman Outlet</span>
+        <span class="qv-contact-phone" id="qv-contact-phone"></span>
+      </div>
+      <button class="qv-contact-btn" onclick="qvChatWA()" aria-label="Chat with us on WhatsApp about this product">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M5.077 20.95l.286-1.048C4.002 18.726 3 16.455 3 14.002 3 8.478 7.477 4 13 4s10 4.478 10 10.002c0 5.523-4.477 10.002-10 10.002-1.68 0-3.26-.427-4.642-1.178L5.077 20.95zM13 2C6.373 2 1 7.373 1 14.002c0 2.392.71 4.624 1.93 6.488L1.05 22.95 4.62 22.05C6.412 23.002 8.645 23.54 11 23.54c.674 0 1.333-.057 1.973-.167C19.14 22.36 24 18.546 24 14.002 24 7.373 19.627 2 13 2z"/></svg>
+        WhatsApp
+      </button>
     </div>
   </div>
 </div>
