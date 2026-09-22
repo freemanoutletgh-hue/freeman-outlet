@@ -4,9 +4,9 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Freeman Outlet – Everyday Basics At Outlet Prices</title>
-  <meta name="description" content="Freeman Outlet, Ghana — Shop genuine Fruit of the Loom undershirts, boxers, unisex socks & ladies' panties at outlet prices. Delivered anywhere in Ghana."/>
+  <meta name="description" content="Freeman Outlet, Ghana — Shop genuine undershirts, boxers, socks & ladies' panties from Fruit of the Loom, Jockey, Pier One, George and Charnos at outlet prices. Delivered anywhere in Ghana."/>
   <meta property="og:title" content="Freeman Outlet — Everyday Basics At Outlet Prices"/>
-  <meta property="og:description" content="Shop genuine Fruit of the Loom undershirts, boxers, unisex socks & ladies' panties at outlet prices. Delivered anywhere in Ghana."/>
+  <meta property="og:description" content="Shop genuine undershirts, boxers, socks & ladies' panties from Fruit of the Loom, Jockey, Pier One, George and Charnos at outlet prices. Delivered anywhere in Ghana."/>
   <meta property="og:image" content="/assets/images/hero.jpg"/>
   <!-- Google Identity Services -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -202,7 +202,7 @@
   <div class="hero-content">
     <div class="hero-pill" id="hero-pill">Freeman Outlet · Ghana</div>
     <h1 id="hero-headline">Everyday Basics <span>Built To Last</span><br>At Outlet Prices</h1>
-    <p class="hero-sub" id="hero-sub">Fruit of the Loom undershirts, boxers, unisex socks &amp; ladies' panties — genuine stock, honest prices, delivered anywhere in Ghana.</p>
+    <p class="hero-sub" id="hero-sub">Undershirts, boxers, socks &amp; ladies' panties from brands like Fruit of the Loom, Jockey, Pier One, George and Charnos — genuine stock, honest prices, delivered anywhere in Ghana.</p>
     <div class="hero-btns">
       <button class="hero-btn-p" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shop Now </button>
       <a href="https://wa.me/" target="_blank" rel="noopener" class="hero-btn-o" id="hero-wa-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M5.077 20.95l.286-1.048C4.002 18.726 3 16.455 3 14.002 3 8.478 7.477 4 13 4s10 4.478 10 10.002c0 5.523-4.477 10.002-10 10.002-1.68 0-3.26-.427-4.642-1.178L5.077 20.95zM13 2C6.373 2 1 7.373 1 14.002c0 2.392.71 4.624 1.93 6.488L1.05 22.95 4.62 22.05C6.412 23.002 8.645 23.54 11 23.54c.674 0 1.333-.057 1.973-.167C19.14 22.36 24 18.546 24 14.002 24 7.373 19.627 2 13 2z"/></svg> Send us a WhatsApp</a>
@@ -604,6 +604,8 @@
       </table>
       <p style="font-size:11px;color:var(--muted);margin-top:10px">Measure around the fullest part of your hips. Between sizes? Size up for comfort.</p>
     </div>
+    <div id="sg-dynamic" style="display:none"></div>
+    <div id="sg-dynamic" style="display:none"></div>
     <div id="sg-socks" style="display:none">
       <span class="sg-section">Unisex Socks — Shoe Size</span>
       <table class="sg-table">
@@ -738,7 +740,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
         </button>
         <div class="qv-caption" aria-live="polite">
-          <span class="qv-caption-lbl">Genuine Fruit of the Loom</span>
+          <span class="qv-caption-lbl" id="qv-caption-lbl" hidden></span>
           <span class="qv-caption-name" id="qv-caption-name"></span>
         </div>
       </div>
@@ -772,7 +774,7 @@
       </div>
       <ul class="qv-trust" aria-label="Ordering promises">
         <li>Pay on delivery</li>
-        <li>Genuine Fruit of the Loom</li>
+        <li id="qv-brand-chip" hidden></li>
         <li>Order via WhatsApp</li>
       </ul>
       <div class="qv-info" id="qv-info"></div>

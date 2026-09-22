@@ -56,8 +56,10 @@
                         if (nameEl) nameEl.textContent = d.name + ' (' + d.role + ')';
                         localStorage.setItem('_adminUser', d.username);
                         localStorage.setItem('_adminRole', d.role);
+                        if (d.role === 'viewer') { location.href = '/supply.html'; return; }
                         startAdminApp(d.role);
                         startOnlinePoll();
+                        showSupplyLink(d.role);
                     } else {
                         err.textContent = d.error || 'Invalid credentials.';
                         err.style.display = '';
@@ -65,6 +67,20 @@
                 })
                 .catch(() => { err.textContent = 'Network error — try again.'; err.style.display = ''; })
                 .finally(() => { btn.disabled = false; btn.textContent = 'Sign In'; });
+        }
+
+        // Owner and manager get a shortcut to the Supply page, with the number of things waiting on their To do list
+        function showSupplyLink(role) {
+            if (role !== 'owner' && role !== 'manager') return;
+            const link = document.getElementById('admin-supply-link');
+            if (link) link.style.display = '';
+            fetch('/api/supply/todo/count', { headers: { Authorization: 'Bearer ' + adminToken } })
+                .then(r => r.ok ? r.json() : null)
+                .then(d => {
+                    const b = document.getElementById('admin-supply-badge');
+                    if (b && d && d.count > 0) { b.textContent = d.count; b.style.display = ''; }
+                })
+                .catch(() => {});
         }
 
         function adminLogout() {
@@ -90,8 +106,10 @@
                         if (nameEl) nameEl.textContent = me.name + ' (' + me.role + ')';
                         localStorage.setItem('_adminUser', me.username);
                         localStorage.setItem('_adminRole', me.role);
+                        if (me.role === 'viewer') { location.href = '/supply.html'; return; }
                         startAdminApp(me.role);
                         startOnlinePoll();
+                        showSupplyLink(me.role);
                     })
                     .catch(() => { localStorage.removeItem(ADMIN_TOKEN_KEY); adminToken = ''; loginScreen.style.display = 'flex'; app.style.display = 'none'; });
             } else {
@@ -1135,6 +1153,7 @@
             document.getElementById('form-price').value = product.price;
             document.getElementById('form-original-price').value = product.originalPrice || '';
             document.getElementById('form-category').value = product.category || '';
+            document.getElementById('form-brand').value = product.brand || '';
             document.getElementById('form-desc').value = product.desc || '';
             document.getElementById('form-fit').value  = product.fitNotes  || '';
             document.getElementById('form-care').value = product.careNotes || '';
@@ -1615,7 +1634,7 @@
                     hint.textContent = 'Not a saving — must be less than ' + q + ' × GH₵' + unit.toFixed(2) + ' = GH₵' + (q * unit).toFixed(2) + '. It will be ignored on the store.';
                     hint.className = 'b-hint text-[11px] text-red-600 mt-1.5';
                 } else {
-                    hint.textContent = 'About GH₵' + (p / q).toFixed(2) + ' per piece' + (unit > 0 ? ' · customer saves GH₵' + (q * unit - p).toFixed(2) : '');
+                    hint.textContent = 'About GH₵' + (p / q).toFixed(2) + ' per pack' + (unit > 0 ? ' · customer saves GH₵' + (q * unit - p).toFixed(2) : '');
                     hint.className = 'b-hint text-[11px] text-gray-500 mt-1.5';
                 }
             });
@@ -2852,7 +2871,45 @@
             renderStock();
         }
 
+        // ── STOCK BY LOCATION (Main = Dome warehouse, Online = website, Supply = shops) ──
+        let poolCache = null;
+        function poolProduct(pid) { return poolCache && poolCache.products ? poolCache.products.find(x => x.id === pid) : null; }
+        // while size stock is tracked, the pools decide this product's numbers and it cannot be typed over here
+        function isPoolLocked(pid) { const pp = poolProduct(pid); return !!(poolCache && poolCache.tracking && pp && pp.tracked); }
+        function canEditStockHere() { return ['owner', 'manager'].includes(localStorage.getItem('_adminRole')); }
+        function renderPoolPanel() {
+            const box = document.getElementById('pool-panel');
+            if (!box) return;
+            if (!poolCache) { box.innerHTML = ''; return; }
+            const t = poolCache.totals, all = t.dome + t.online + t.supply;
+            const worth = poolCache.products.reduce((s, x) => { const pr = parseFloat((stockCache.find(p => p.id === x.id) || {}).price) || 0; return s + (x.totals.dome + x.totals.online + x.totals.supply) * pr; }, 0);
+            const card = (label, n, sub, cls) => '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4"><p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">' + label + '</p><p class="text-2xl font-bold ' + (cls || 'text-gray-900') + ' mt-1">' + n + '</p><p class="text-[10px] text-gray-400 mt-0.5">' + sub + '</p></div>';
+            const banner = poolCache.tracking
+                ? '<b>Size stock is on.</b> The website sells from the Online pool, by size. To change these numbers use Supply &rsaquo; Stock (receive a delivery, move stock, count).'
+                : '<b>Size stock has not been started.</b> The website still uses the numbers typed in the table below. Main and Supply stock are recorded in Supply &rsaquo; Stock; start tracking there once Online stock is counted by size.';
+            box.innerHTML = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">'
+                + card('Main stock (Dome)', t.dome, 'packs in the warehouse')
+                + card('Online (website)', t.online, 'packs at Spintex', 'text-orange-500')
+                + card('Supply (shops)', t.supply, 'packs at Spintex')
+                + card('All locations', all, 'packs · sell value GH₵' + worth.toLocaleString('en-GH', { maximumFractionDigits: 0 }))
+                + '</div>'
+                + '<div class="flex items-center justify-between gap-3 flex-wrap rounded-xl border ' + (poolCache.tracking ? 'border-gray-200 bg-white' : 'border-amber-200 bg-amber-50') + ' px-4 py-3 text-xs text-gray-600">'
+                + '<span>' + banner + '</span>'
+                + (poolCache.canManage ? '<a href="/supply.html#/stock" class="font-bold text-gray-900 hover:underline whitespace-nowrap">Open Supply stock &rarr;</a>' : '')
+                + '</div>';
+        }
+        function poolMatrixHtml(p) {
+            const pp = poolProduct(p.id);
+            const sizes = []; pp.colours.forEach(c => c.sizes.forEach(s => { if (!sizes.includes(s)) sizes.push(s); }));
+            const cell = (c, s) => { const r = pp.skus[c + '|' + s]; if (!r) return '<td class="px-2 py-1 text-center text-gray-300">—</td>'; return '<td class="px-2 py-1 text-center"><b class="' + (r.online === 0 ? 'text-red-500' : 'text-gray-900') + '">' + r.online + '</b><span class="block text-[10px] text-gray-400">' + r.dome + ' main · ' + r.supply + ' supply</span></td>'; };
+            return '<p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Stock by size — ' + escAdm(p.name) + ' <span class="normal-case font-normal text-gray-400">(big number = Online, changed in Supply &rsaquo; Stock)</span></p>'
+              + '<div class="overflow-x-auto"><table class="text-xs bg-white border border-gray-200 rounded-xl"><thead><tr><th class="px-2 py-1"></th>' + sizes.map(s => '<th class="px-2 py-1 text-gray-500">' + escAdm(s || 'Packs') + '</th>').join('') + '</tr></thead><tbody>'
+              + pp.colours.map(c => '<tr><td class="px-2 py-1 font-semibold text-gray-700">' + escAdm(c.name || '—') + '</td>' + sizes.map(s => cell(c.name, s)).join('') + '</tr>').join('')
+              + '</tbody></table></div>';
+        }
+
         function renderStock() {
+            renderPoolPanel();
             const tbody = document.getElementById('stock-table-body');
             const threshold = parseInt(document.getElementById('set-stock-threshold')?.value) || 3;
 
@@ -2926,6 +2983,7 @@
                       <img src="${escAdm(p.image || '')}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#f3f4f6" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22%3E%3C/text%3E%3C/svg%3E'"/>
                       <div>
                         <p class="text-sm font-semibold text-gray-800">${escAdm(p.name)}</p>
+                        ${poolProduct(p.id) ? `<p class="text-[10px] text-gray-400">Online ${poolProduct(p.id).totals.online} · Main ${poolProduct(p.id).totals.dome} · Supply ${poolProduct(p.id).totals.supply}</p>` : ''}
                         ${hasVariants ? `<button onclick="toggleVariantRow('${escAdm(p.id)}')" class="text-[10px] text-orange-500 hover:underline font-semibold">Variants${variantCount ? ' (' + variantCount + ')' : ''}</button>` : ''}
                       </div>
                     </div>
@@ -2933,13 +2991,14 @@
                   <td class="py-3 px-4 text-xs text-gray-400">${escAdm(p.category || '—')}</td>
                   <td class="py-3 px-4 text-xs font-semibold text-gray-700 text-center">GH₵${parseFloat(p.price).toFixed(2)}</td>
                   <td class="py-3 px-4" style="width:180px">
+                    ${(() => { const locked = isPoolLocked(p.id) || !canEditStockHere(); const dis = locked ? 'disabled title="' + (canEditStockHere() ? 'Tracked by size — change it in Supply &gt; Stock' : 'View only') + '"' : ''; return `
                     <div class="flex items-center gap-1.5">
-                      <button onclick="adjustStock('${escAdm(p.id)}', -1)" class="w-6 h-6 rounded-md bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 text-sm font-bold flex items-center justify-center transition-colors">−</button>
-                      <input type="number" min="0" value="${isTracked ? stock : ''}" placeholder="—"
-                        class="stock-input w-14 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-300"
+                      <button ${dis} onclick="adjustStock('${escAdm(p.id)}', -1)" class="w-6 h-6 rounded-md bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 text-sm font-bold flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed">−</button>
+                      <input type="number" min="0" value="${isTracked ? stock : ''}" placeholder="—" ${dis}
+                        class="stock-input w-14 border border-gray-200 rounded-lg px-2 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-300 disabled:opacity-60"
                         onchange="promptSetStock('${escAdm(p.id)}', this.value, this)"/>
-                      <button onclick="adjustStock('${escAdm(p.id)}', 1)" class="w-6 h-6 rounded-md bg-gray-100 hover:bg-emerald-100 text-gray-600 hover:text-emerald-600 text-sm font-bold flex items-center justify-center transition-colors">+</button>
-                    </div>
+                      <button ${dis} onclick="adjustStock('${escAdm(p.id)}', 1)" class="w-6 h-6 rounded-md bg-gray-100 hover:bg-emerald-100 text-gray-600 hover:text-emerald-600 text-sm font-bold flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed">+</button>
+                    </div>`; })()}
                   </td>
                   <td class="py-3 px-4 text-xs font-semibold text-right ${isTracked ? 'text-gray-700' : 'text-gray-300'}">${value}</td>
                   <td class="py-3 px-4 text-center">${badge}</td>
@@ -3054,6 +3113,7 @@
         function renderVariantGrid(p) {
             const grid = document.getElementById('variant-grid-' + p.id);
             if (!grid) return;
+            if (isPoolLocked(p.id) || (poolCache && !canEditStockHere())) { grid.innerHTML = poolMatrixHtml(p); return; }
             const isRich = Array.isArray(p.variants) && p.variants.length && typeof p.variants[0] === 'object';
             const sizes  = p.sizes && p.sizes.length ? p.sizes : [''];
             const vs = p.variantStock || {};
@@ -3389,12 +3449,16 @@
             if (picker && !picker.value) picker.value = new Date().toISOString().slice(0, 7);
             const tbody = document.getElementById('stock-table-body');
             if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-400 text-xs">Loading…</td></tr>';
+            const canSeePools = ['owner', 'manager', 'staff'].includes(localStorage.getItem('_adminRole'));
+            const canSeeCost  = canEditStockHere(); // cost/profit figures are owner/manager only
             Promise.all([
                 fetch('/api/admin/all-products').then(r => r.json()),
-                fetch('/api/inventory/meta').then(r => r.json()).catch(() => ({}))
-            ]).then(([prods, meta]) => {
+                canSeeCost ? fetch('/api/inventory/meta').then(r => r.json()).catch(() => ({})) : Promise.resolve({}),
+                canSeePools ? fetch('/api/supply/stock-summary').then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null)
+            ]).then(([prods, meta, pools]) => {
                 stockCache  = prods;
                 invMetaCache = meta || {};
+                poolCache = pools;
                 setStockFilter(stockFilter);
                 if (activeStockTab !== 'overview') switchStockTab(activeStockTab);
                 populateBaseProductDropdown();
@@ -4780,18 +4844,24 @@
                 // Apply immediately if settings is already active
                 setTimeout(window._managerSettingsHide, 400);
             } else if (role === 'staff') {
-                // Staff — Sales only (orders, invoices, promos)
-                ['catalogue', 'customers', 'insights', 'content', 'settings'].forEach(hideGroup);
+                // Staff (handles WhatsApp orders) — Sales, plus a read-only Stock view so they can quote
+                // what's in stock; no Products/Categories editing and no Customers/Insights/Content/Settings.
+                ['customers', 'insights', 'content', 'settings'].forEach(hideGroup);
+                GROUPS.catalogue.tabs = ['stock']; // only Stock reachable — Products/Categories never render
+                const catBtn = document.getElementById('grp-catalogue');
+                if (catBtn) catBtn.textContent = 'Stock';
                 const panel = document.getElementById('admin-accounts-panel');
                 if (panel) panel.style.display = 'none';
-                // Hide all destructive actions (delete buttons) for staff
+                // Hide all destructive actions (delete buttons), stock-editing controls and financial sub-tabs for staff
                 const styleEl = document.createElement('style');
                 styleEl.id = 'staff-role-css';
                 styleEl.textContent = `
                     [onclick*="deleteProduct"],[onclick*="deleteOrder"],[onclick*="deleteReview"],
                     [onclick*="deleteNotify"],[onclick*="deleteCode"],[onclick*="deleteCategory"],
                     [onclick*="deleteFaq"],[onclick*="deleteBaseProduct"],[onclick*="deleteDelivery"],
-                    [onclick*="deleteStockIntake"],[onclick*="bulkDeleteOrders"] { display: none !important; }
+                    [onclick*="deleteStockIntake"],[onclick*="bulkDeleteOrders"],
+                    [onclick^="openIntakeModal"], #stab-costing, #stab-reports,
+                    #val-card-cost, #val-card-profit { display: none !important; }
                 `;
                 document.head.appendChild(styleEl);
                 // switchGroup('sales') is called by startAdminApp for staff

@@ -206,7 +206,9 @@ function saveJSON(file, data) {
     fs.renameSync(tmp, file);
 }
 
+let stockMod = null; // size-level stock (stock.js); null until registered at the bottom of this file
 function deductStock(cartItems) {
+    if (stockMod) cartItems = stockMod.online(cartItems, -1, 'Website order');
     let changed = false;
     const thresh = settings.stockAlertThreshold || 3;
     (cartItems || []).forEach(item => {
@@ -250,6 +252,7 @@ function deductStock(cartItems) {
 // deleted order). `reason`/`ref` identify which order caused the restoration
 // in the stock-movement ledger.
 function restoreStock(items, reason, ref) {
+    if (stockMod) items = stockMod.online(items, 1, reason, ref);
     let changed = false;
     (items || []).forEach(item => {
         const p = products.find(p => p.id === item.id);
@@ -434,9 +437,9 @@ const SETTINGS_DEFAULTS = {
     shopClosedMsg:    'We\'re temporarily closed. Check back soon!',
     heroPill:         'Freeman Outlet · Ghana',
     heroHeadline:     'Everyday Basics <span>Built To Last</span><br>At Outlet Prices',
-    heroSub:          'Fruit of the Loom undershirts, boxers, unisex socks & ladies\' panties — genuine stock, honest prices, delivered anywhere in Ghana.',
+    heroSub:          'Undershirts, boxers, socks & ladies\' panties from brands like Fruit of the Loom, Jockey, Pier One, George and Charnos — genuine stock, honest prices, delivered anywhere in Ghana.',
     aboutHeading:     'Quality Basics, <span>Honest Prices</span>',
-    aboutBody:        'Freeman Outlet is a Ghanaian-based outlet store bringing genuine Fruit of the Loom undershirts, boxers, unisex socks and ladies\' panties to your doorstep at honest, outlet prices.\n\nEvery item we sell is 100% authentic — no fakes, no knock-offs. We buy in bulk so we can pass the savings straight to you, without cutting corners on quality.\n\nWhether you\'re restocking your everyday essentials or shopping for the family, we\'ve got sizes and packs to match — delivered fresh, anywhere in Ghana.',
+    aboutBody:        'Freeman Outlet is a Ghanaian-based outlet store bringing genuine undershirts, boxers, socks and ladies\' panties from brands like Fruit of the Loom, Jockey, Pier One, George and Charnos to your doorstep at honest, outlet prices.\n\nEvery item we sell is 100% authentic — no fakes, no knock-offs. We buy in bulk so we can pass the savings straight to you, without cutting corners on quality.\n\nWhether you\'re restocking your everyday essentials or shopping for the family, we\'ve got sizes and packs to match — delivered fresh, anywhere in Ghana.',
     footerTagline:    'Everyday Basics. Built To Last. Outlet Prices.',
     trustLine1:       '<strong>Nationwide delivery</strong> across Ghana',
     trustLine2:       'Free delivery in <strong>Accra</strong> on orders over <strong>GH₵200</strong>',
@@ -456,7 +459,7 @@ const SETTINGS_DEFAULTS = {
     brandVideoTitle: 'Our Story',
     heroVideoEnabled: false,
     seoTitle:        'Freeman Outlet – Everyday Basics At Outlet Prices',
-    seoDescription:  'Freeman Outlet, Ghana — Shop genuine Fruit of the Loom undershirts, boxers, unisex socks & ladies\' panties at outlet prices. Delivered anywhere in Ghana.',
+    seoDescription:  'Freeman Outlet, Ghana — Shop genuine undershirts, boxers, socks & ladies\' panties from Fruit of the Loom, Jockey, Pier One, George and Charnos at outlet prices. Delivered anywhere in Ghana.',
     accentColor:     '#C9971C',
     fontBody:        'Jost',
     stockAlertEnabled:   false,
@@ -473,7 +476,7 @@ const SEED_FAQS = [
     { id: 'faq-1', q: 'How do I place an order?', a: 'Browse the shop and add items to your cart. When you\'re ready, go to checkout and send your order straight to us on WhatsApp with one tap — we\'ll confirm pricing, delivery and payment with you there.' },
     { id: 'faq-2', q: 'What payment methods do you accept?', a: 'We arrange payment directly with you on WhatsApp — cash on delivery, mobile money (MTN, Vodafone, AirtelTigo) or bank transfer, whichever works best for you.' },
     { id: 'faq-3', q: 'How long does delivery take?', a: 'Accra deliveries take 1–2 business days. Greater Accra suburbs 1–3 days. All other regions across Ghana 3–5 business days. You\'ll get a WhatsApp message when your order is dispatched.' },
-    { id: 'faq-4', q: 'Are your products genuine Fruit of the Loom?', a: 'Yes — every item we sell is 100% authentic Fruit of the Loom, sourced directly. If anything ever arrives damaged or not as described, message us on WhatsApp and we\'ll sort it out right away.' },
+    { id: 'faq-4', q: 'Are your products genuine?', a: 'Yes — every item we sell is 100% authentic stock from the brand named on its product page (Fruit of the Loom, Jockey, Pier One, George or Charnos), sourced directly. If anything ever arrives damaged or not as described, message us on WhatsApp and we\'ll sort it out right away.' },
     { id: 'faq-5', q: 'Can I order if I\'m outside Ghana?', a: 'We currently deliver within Ghana only. If you\'re in the diaspora and want to send basics to someone in Ghana, we can absolutely help — message us on WhatsApp.' },
     { id: 'faq-6', q: 'What if an item is sold out?', a: 'Click "Notify Me" on any sold-out product and enter your name and contact. We\'ll reach out the moment it\'s back in stock. You can also WhatsApp us to ask about restock timelines.' }
 ];
@@ -658,7 +661,7 @@ const siteImageUpload = multer({
     }
 });
 
-app.post('/api/site-images/:slot', requireAdminJWT, (req, res, next) => {
+app.post('/api/site-images/:slot', requireAdminJWT, requireManagerOrOwner, (req, res, next) => {
     if (!SITE_IMAGE_SLOTS[req.params.slot]) return res.status(400).json({ success: false, message: 'Unknown slot.' });
     siteImageUpload.single('image')(req, res, err => {
         if (err) return res.status(400).json({ success: false, message: err.message });
@@ -681,7 +684,7 @@ const heroVideoUpload = multer({
     limits: { fileSize: 80 * 1024 * 1024 }
 });
 
-app.post('/api/site-video/hero', requireAdminJWT, (req, res) => {
+app.post('/api/site-video/hero', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     heroVideoUpload.single('video')(req, res, err => {
         if (err) return res.status(400).json({ success: false, message: err.message });
         if (!req.file) return res.status(400).json({ success: false, message: 'No file uploaded.' });
@@ -705,7 +708,7 @@ const uploadProduct = upload.fields([
 // ── PRODUCTS ───────────────────────────────────────────────────────────────
 
 // GET: All products — strip internal fields before sending to storefront
-const PUBLIC_PRODUCT_FIELDS = ['id','name','price','originalPrice','category','desc','image','images','variants','sizes','stock','variantStock','isSoldOut','featured','createdAt','updatedAt','bundles','fitNotes','careNotes'];
+const PUBLIC_PRODUCT_FIELDS = ['id','name','price','originalPrice','category','desc','image','images','variants','sizes','stock','variantStock','isSoldOut','featured','createdAt','updatedAt','bundles','fitNotes','careNotes','brand'];
 app.get('/api/products', (req, res) => {
     const pub = products
         .filter(p => p.isListed !== false)
@@ -743,8 +746,8 @@ async function optimiseUploadedFiles(files, fields) {
 }
 
 // POST: Add product
-app.post('/api/products', requireAdminJWT, uploadProduct, async (req, res) => {
-    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut, bundlesJson, fitNotes, careNotes } = req.body;
+app.post('/api/products', requireAdminJWT, requireManagerOrOwner, uploadProduct, async (req, res) => {
+    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut, bundlesJson, fitNotes, careNotes, brand } = req.body;
     const DEFAULT_IMG = "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=500";
 
     const uploadedImages = await optimiseUploadedFiles(req.files, ['productImage','productImage2','productImage3','productImage4']);
@@ -768,6 +771,7 @@ app.post('/api/products', requireAdminJWT, uploadProduct, async (req, res) => {
             originalPrice: storedOrig,
             category: category || "",
             desc,
+            brand: String(brand || '').trim().slice(0, 60),
             fitNotes: String(fitNotes || '').slice(0, 1000),
             careNotes: String(careNotes || '').slice(0, 1000),
             bundles: cleanBundles(bundlesJson),
@@ -795,7 +799,7 @@ app.post('/api/products', requireAdminJWT, uploadProduct, async (req, res) => {
 });
 
 // ── PRODUCT SORT ORDER (must be before /:id to avoid route shadowing) ───────
-app.put('/api/products/sort-order', requireAdminJWT, (req, res) => {
+app.put('/api/products/sort-order', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { orderedIds } = req.body;
     if (!Array.isArray(orderedIds)) return res.status(400).json({ success: false, message: 'orderedIds array required.' });
     const idSet = new Set(orderedIds);
@@ -807,9 +811,9 @@ app.put('/api/products/sort-order', requireAdminJWT, (req, res) => {
 });
 
 // PUT: Update product
-app.put('/api/products/:id', requireAdminJWT, uploadProduct, async (req, res) => {
+app.put('/api/products/:id', requireAdminJWT, requireManagerOrOwner, uploadProduct, async (req, res) => {
     const { id } = req.params;
-    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut, bundlesJson, fitNotes, careNotes } = req.body;
+    const { name, price, originalPrice, category, desc, variants, sizes, stock, isSoldOut, bundlesJson, fitNotes, careNotes, brand } = req.body;
 
     const idx = products.findIndex(p => p.id === id);
     if (idx === -1) return res.status(404).json({ success: false, message: "Product not found" });
@@ -861,6 +865,7 @@ app.put('/api/products/:id', requireAdminJWT, uploadProduct, async (req, res) =>
     }
     if (category !== undefined) product.category = category;
     if (desc !== undefined) product.desc = desc;
+    if (brand !== undefined)     product.brand     = String(brand).trim().slice(0, 60);
     if (fitNotes !== undefined)  product.fitNotes  = String(fitNotes).slice(0, 1000);
     if (careNotes !== undefined) product.careNotes = String(careNotes).slice(0, 1000);
     if (bundlesJson !== undefined) product.bundles = cleanBundles(bundlesJson);
@@ -916,6 +921,9 @@ app.put('/api/products/:id', requireAdminJWT, uploadProduct, async (req, res) =>
         }
     }
 
+    // while size stock is tracked, the pools decide this product's numbers — ignore any stock typed into the form
+    if (stockMod) stockMod.syncProduct(product.id);
+
     // Build diff and append history entry
     const FIELD_LABELS = {
         name: 'Name', price: 'Price (GHS)', originalPrice: 'Was Price (GHS)',
@@ -966,7 +974,7 @@ app.delete('/api/products/:id', requireAdminJWT, requireManagerOrOwner, (req, re
 });
 
 // POST: Add product via JSON (for inventory app — main POST redirects to HTML)
-app.post('/api/admin/products', requireAdminJWT, (req, res) => {
+app.post('/api/admin/products', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { name, price, category, stock, isSoldOut, isListed } = req.body;
     if (!name || price === undefined) return res.status(400).json({ success: false, message: 'Name and price are required.' });
     const cleanPrice = parseFloat(price);
@@ -993,7 +1001,7 @@ app.post('/api/admin/products', requireAdminJWT, (req, res) => {
 });
 
 // PATCH: Toggle listed/unlisted
-app.patch('/api/products/:id/listed', requireAdminJWT, (req, res) => {
+app.patch('/api/products/:id/listed', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const prod = products.find(p => p.id === req.params.id);
     if (!prod) return res.status(404).json({ success: false, message: 'Product not found.' });
     prod.isListed = req.body.isListed === true || req.body.isListed === 'true';
@@ -1004,9 +1012,10 @@ app.patch('/api/products/:id/listed', requireAdminJWT, (req, res) => {
 });
 
 // PATCH: Quick stock update
-app.patch('/api/products/:id/stock', requireAdminJWT, (req, res) => {
+app.patch('/api/products/:id/stock', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const prod = products.find(p => p.id === req.params.id);
     if (!prod) return res.status(404).json({ success: false, message: 'Product not found.' });
+    if (stockMod && stockMod.isLocked(prod.id)) return res.status(409).json({ success: false, message: 'Stock for this product is tracked by size. Change it in Supply > Stock (Receive delivery, Move stock or Count stock).' });
     const { stock, isSoldOut, reason } = req.body;
     const prevStock = prod.stock;
     if (stock !== undefined) prod.stock = stock === null || stock === '' ? null : parseInt(stock);
@@ -1029,6 +1038,8 @@ function validateCartStock(cartItems) {
         if (!p) continue;
         if (p.isListed === false) return `"${p.name}" is no longer available.`;
         const qty = parseInt(i.quantity, 10) || 1;
+        const sizeStockError = stockMod && stockMod.validateOnline(i);
+        if (sizeStockError) return sizeStockError;
         const isRichVariant = Array.isArray(p.variants) && p.variants.length && typeof p.variants[0] === 'object';
         if (isRichVariant) {
             if (p.isSoldOut) return `"${p.name}" is sold out and cannot be ordered.`;
@@ -1177,12 +1188,12 @@ app.post('/api/admin/manual-invoice', requireAdminJWT, async (req, res) => {
 
     // Validate stock for linked product items
     const stockError = validateCartStock(
-        orderItems.filter(i => i.id).map(i => ({ id: i.id, color: i.color, quantity: i.quantity }))
+        orderItems.filter(i => i.id).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: i.quantity }))
     );
     if (stockError) return res.status(400).json({ success: false, message: stockError });
 
     // Deduct stock BEFORE saving the order so the flag is only set if deduction succeeds
-    deductStock(orderItems.filter(i => i.id).map(i => ({ id: i.id, color: i.color, quantity: i.quantity })));
+    deductStock(orderItems.filter(i => i.id).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: i.quantity })));
     order.stockDeducted = true;
     orders.push(order);
     saveJSON(ORDERS_FILE, orders);
@@ -2057,7 +2068,7 @@ app.post('/api/reviews', (req, res) => {
 });
 
 // PATCH: Approve or reject a review (admin only)
-app.patch('/api/reviews/:id/approve', requireAdminJWT, (req, res) => {
+app.patch('/api/reviews/:id/approve', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const rev = reviews.find(r => r.id === req.params.id);
     if (!rev) return res.status(404).json({ success: false, message: 'Review not found.' });
     rev.approved = req.body.approved !== false;
@@ -2139,7 +2150,7 @@ app.post('/api/orders/bulk-status', requireAdminJWT, (req, res) => {
         if (!order) return;
         order.status = status;
         if ((status === 'Shipped' || status === 'Delivered') && !order.stockDeducted) {
-            deductStock((order.items || []).map(i => ({ id: i.id, color: i.color, quantity: parseInt(i.quantity, 10) || 1 })));
+            deductStock((order.items || []).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: parseInt(i.quantity, 10) || 1 })));
             order.stockDeducted = true;
         }
         updated++;
@@ -2243,7 +2254,7 @@ app.delete('/api/codes/:code', requireAdminJWT, requireManagerOrOwner, (req, res
 
 app.get('/api/delivery', (req, res) => res.json(delivery));
 
-app.post('/api/delivery', requireAdminJWT, (req, res) => {
+app.post('/api/delivery', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { name, region, price, address } = req.body;
     if (!name || price === undefined || price === '') return res.status(400).json({ success: false, message: 'Name and price are required.' });
     const parsed = parseFloat(price);
@@ -2275,7 +2286,7 @@ app.get('/api/zone-map', (req, res) => {
 });
 
 // PUT tier prices for a region: body { region, tiers }
-app.put('/api/zone-map/tiers', requireAdminJWT, (req, res) => {
+app.put('/api/zone-map/tiers', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { tiers, region = 'Greater Accra' } = req.body;
     if (!tiers || typeof tiers !== 'object') return res.status(400).json({ success: false, message: 'tiers object required.' });
     if (!GH_REGIONS_LIST.includes(region)) return res.status(400).json({ success: false, message: 'Invalid region.' });
@@ -2291,7 +2302,7 @@ app.put('/api/zone-map/tiers', requireAdminJWT, (req, res) => {
 });
 
 // PUT areas for a region: body { region, areas }
-app.put('/api/zone-map/areas', requireAdminJWT, (req, res) => {
+app.put('/api/zone-map/areas', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { areas, region = 'Greater Accra' } = req.body;
     if (!Array.isArray(areas)) return res.status(400).json({ success: false, message: 'areas array required.' });
     if (!GH_REGIONS_LIST.includes(region)) return res.status(400).json({ success: false, message: 'Invalid region.' });
@@ -2305,7 +2316,7 @@ app.put('/api/zone-map/areas', requireAdminJWT, (req, res) => {
 
 app.get('/api/region-rates', (req, res) => res.json(regionRates));
 
-app.put('/api/region-rates', requireAdminJWT, (req, res) => {
+app.put('/api/region-rates', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const updates = req.body;
     if (!updates || typeof updates !== 'object') return res.status(400).json({ success: false, message: 'Object required.' });
     Object.keys(updates).forEach(region => {
@@ -2323,7 +2334,7 @@ app.put('/api/region-rates', requireAdminJWT, (req, res) => {
 
 app.get('/api/categories', (req, res) => res.json(categories));
 
-app.post('/api/categories', requireAdminJWT, (req, res) => {
+app.post('/api/categories', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { name } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ success: false, message: 'Category name is required.' });
     const trimmed = name.trim();
@@ -2336,7 +2347,7 @@ app.post('/api/categories', requireAdminJWT, (req, res) => {
     res.json({ success: true, category: cat });
 });
 
-app.put('/api/categories/reorder', requireAdminJWT, (req, res) => {
+app.put('/api/categories/reorder', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { order } = req.body;
     if (!Array.isArray(order)) return res.status(400).json({ success: false, message: 'order must be an array.' });
     const catMap = Object.fromEntries(categories.map(c => [c.name.toLowerCase(), c]));
@@ -2348,7 +2359,7 @@ app.put('/api/categories/reorder', requireAdminJWT, (req, res) => {
     res.json({ success: true, categories });
 });
 
-app.put('/api/categories/:name/toggle', requireAdminJWT, (req, res) => {
+app.put('/api/categories/:name/toggle', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const cat = categories.find(c => c.name.toLowerCase() === req.params.name.toLowerCase());
     if (!cat) return res.status(404).json({ success: false, message: 'Category not found.' });
     cat.enabled = !cat.enabled;
@@ -2534,7 +2545,7 @@ app.post('/api/admin/broadcast-product', requireAdminJWT, requireOwner, async (r
     }
 });
 
-app.post('/api/admin/test-email', requireAdminJWT, async (req, res) => {
+app.post('/api/admin/test-email', requireAdminJWT, requireManagerOrOwner, async (req, res) => {
     if (!GMAIL_PASS) return res.status(500).json({ success: false, message: 'GMAIL_PASS not set in environment.' });
     try {
         const transporter = makeTransporter();
@@ -2575,9 +2586,10 @@ function logMovement({ productId, productName, variant, qty, type, reason, ref, 
 // ── STOCK INTAKES ──────────────────────────────────────────────────────────
 app.get('/api/stock-intakes', requireAdminJWT, (req, res) => res.json(intakes));
 
-app.post('/api/stock-intakes', requireAdminJWT, (req, res) => {
+app.post('/api/stock-intakes', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { supplier, date, notes, lines } = req.body;
     if (!Array.isArray(lines) || !lines.length) return res.status(400).json({ success: false, message: 'No intake lines provided.' });
+    if (stockMod && lines.some(l => l && stockMod.isLocked(l.productId))) return res.status(409).json({ success: false, message: 'Some of these products are tracked by size. Record the delivery in Supply > Stock > Receive delivery instead.' });
     const intake = { id: 'si-' + Date.now(), supplier: supplier || '', date: date || new Date().toISOString(), notes: notes || '', lines, createdAt: Date.now(), createdBy: req.adminUsername || 'admin' };
     // Apply stock increases to products
     lines.forEach(line => {
@@ -2648,8 +2660,8 @@ app.get('/api/stock-movements/export.csv', requireAdminJWT, (req, res) => {
 // sort-order route moved — see before PUT /api/products/:id
 
 // ── INVENTORY ACCOUNTING METADATA ──────────────────────────────────────────
-app.get('/api/inventory/meta', requireAdminJWT, (req, res) => res.json(invMeta));
-app.put('/api/inventory/meta/:productId', requireAdminJWT, (req, res) => {
+app.get('/api/inventory/meta', requireAdminJWT, requireManagerOrOwner, (req, res) => res.json(invMeta));
+app.put('/api/inventory/meta/:productId', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     invMeta[req.params.productId] = req.body;
     saveJSON(INV_META_FILE, invMeta);
     res.json({ success: true });
@@ -2661,9 +2673,10 @@ app.delete('/api/inventory/meta/:productId', requireAdminJWT, requireManagerOrOw
 });
 
 // ── VARIANT STOCK ──────────────────────────────────────────────────────────
-app.patch('/api/products/:id/variant-stock', requireAdminJWT, (req, res) => {
+app.patch('/api/products/:id/variant-stock', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const p = products.find(p => p.id === req.params.id);
     if (!p) return res.status(404).json({ success: false, message: 'Product not found.' });
+    if (stockMod && stockMod.isLocked(p.id)) return res.status(409).json({ success: false, message: 'Stock for this product is tracked by size. Change it in Supply > Stock (Receive delivery, Move stock or Count stock).' });
     const { variant, qty, reason } = req.body;
     if (!variant) return res.status(400).json({ success: false, message: 'variant required.' });
     const newQty = qty === null || qty === '' ? 0 : parseInt(qty) || 0;
@@ -2691,7 +2704,7 @@ app.patch('/api/products/:id/variant-stock', requireAdminJWT, (req, res) => {
 
 app.get('/api/faqs', (req, res) => res.json(faqs));
 
-app.post('/api/faqs', requireAdminJWT, (req, res) => {
+app.post('/api/faqs', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { q, a } = req.body;
     if (!q || !a) return res.status(400).json({ success: false, message: 'Question and answer required.' });
     const faq = { id: 'faq-' + Date.now(), q, a };
@@ -2700,7 +2713,7 @@ app.post('/api/faqs', requireAdminJWT, (req, res) => {
     res.json({ success: true, faq });
 });
 
-app.put('/api/faqs/:id', requireAdminJWT, (req, res) => {
+app.put('/api/faqs/:id', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const faq = faqs.find(f => f.id === req.params.id);
     if (!faq) return res.status(404).json({ success: false, message: 'FAQ not found.' });
     if (req.body.q !== undefined) faq.q = req.body.q;
@@ -2719,7 +2732,7 @@ app.delete('/api/faqs/:id', requireAdminJWT, requireManagerOrOwner, (req, res) =
 
 // ── PRODUCT DUPLICATE ──────────────────────────────────────────────────────
 
-app.post('/api/products/:id/duplicate', requireAdminJWT, (req, res) => {
+app.post('/api/products/:id/duplicate', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const orig = products.find(p => p.id === req.params.id);
     if (!orig) return res.status(404).json({ success: false, message: 'Product not found.' });
     // { ...orig } only shallow-copies — array/object-valued fields (variants,
@@ -2742,6 +2755,12 @@ app.post('/api/products/:id/duplicate', requireAdminJWT, (req, res) => {
         bundles: Array.isArray(orig.bundles) ? orig.bundles.map(b => ({ ...b })) : orig.bundles,
         variantStock: orig.variantStock ? { ...orig.variantStock } : orig.variantStock
     };
+    // a copy has no counted stock of its own: with size tracking on it must start empty, not inherit the original's numbers
+    if (stockMod && stockMod.isTracking()) {
+        clone.stock = 0; clone.isSoldOut = true;
+        if (Array.isArray(clone.variants)) clone.variants.forEach(v => { if (v && typeof v === 'object') v.stock = 0; });
+        if (clone.variantStock) Object.keys(clone.variantStock).forEach(k => { clone.variantStock[k] = 0; });
+    }
     products.push(clone);
     saveJSON(PRODUCTS_FILE, products);
     // Copy inventory meta (cost data) if it exists for the original — same
@@ -2756,7 +2775,7 @@ app.post('/api/products/:id/duplicate', requireAdminJWT, (req, res) => {
 
 // ── PRODUCT BULK ACTIONS ───────────────────────────────────────────────────
 
-app.post('/api/products/bulk', requireAdminJWT, (req, res) => {
+app.post('/api/products/bulk', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { ids, action } = req.body;
     if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ success: false, message: 'No IDs provided.' });
     if (action === 'delete' && req.adminRole === 'staff') return res.status(403).json({ success: false, message: 'Manager or owner access required.' });
@@ -2776,7 +2795,7 @@ app.post('/api/products/bulk', requireAdminJWT, (req, res) => {
 
 // ── PRODUCT FEATURED TOGGLE ────────────────────────────────────────────────
 
-app.put('/api/products/:id/featured', requireAdminJWT, (req, res) => {
+app.put('/api/products/:id/featured', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const p = products.find(p => p.id === req.params.id);
     if (!p) return res.status(404).json({ success: false, message: 'Product not found.' });
     p.featured = !p.featured;
@@ -2788,7 +2807,7 @@ app.put('/api/products/:id/featured', requireAdminJWT, (req, res) => {
 
 // ── REVIEW FEATURED TOGGLE ─────────────────────────────────────────────────
 
-app.put('/api/reviews/:id/featured', requireAdminJWT, (req, res) => {
+app.put('/api/reviews/:id/featured', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const r = reviews.find(r => r.id === req.params.id);
     if (!r) return res.status(404).json({ success: false, message: 'Review not found.' });
     r.featured = !r.featured;
@@ -2827,7 +2846,7 @@ app.get('/api/notify', requireAdminJWT, (req, res) => res.json(notifs));
 // pre-filled wa.me link to open and actually send themselves. This endpoint
 // just validates the entry and marks it notified; the message is composed
 // client-side in admin.js.
-app.post('/api/notify/:id/send', requireAdminJWT, async (req, res) => {
+app.post('/api/notify/:id/send', requireAdminJWT, requireManagerOrOwner, async (req, res) => {
     const n = notifs.find(n => n.id === req.params.id);
     if (!n) return res.status(404).json({ success: false, message: 'Entry not found.' });
     if (!n.phone) return res.status(400).json({ success: false, message: 'No phone number on record for this customer.' });
@@ -3066,7 +3085,7 @@ app.patch('/api/orders/:id/status', requireAdminJWT, (req, res) => {
     // Auto-deduct stock when order first reaches Shipped or Delivered
     // Set flag AFTER deduction so a write failure doesn't permanently skip deduction
     if ((status === 'Shipped' || status === 'Delivered') && !order.stockDeducted) {
-        deductStock((order.items || []).map(item => ({ id: item.id, color: item.color, quantity: parseInt(item.quantity, 10) || 1 })));
+        deductStock((order.items || []).map(item => ({ id: item.id, color: item.color, size: item.size, quantity: parseInt(item.quantity, 10) || 1 })));
         saveJSON(PRODUCTS_FILE, products);
         order.stockDeducted = true;
     }
@@ -3166,6 +3185,10 @@ function requireAdminJWT(req, res, next) {
                 saveJSON(ADMIN_ACCOUNTS_FILE, adminAccounts);
             }
             req.adminUser = account; req.adminRole = account.role; req.adminUsername = account.username;
+            // viewer = view-only: may read /api/supply/* and /api/admin/me, nothing else
+            if (account.role === 'viewer' && !(req.method === 'GET' && (req.originalUrl.startsWith('/api/supply/') || req.originalUrl.split('?')[0] === '/api/admin/me'))) {
+                return res.status(403).json({ success: false, message: 'This account is view-only.' });
+            }
             return next();
         } catch(e) { return res.status(401).json({ error: 'Session expired.' }); }
     }
@@ -3226,7 +3249,7 @@ app.get('/api/admin/me', requireAdminJWT, (req, res) => {
 app.post('/api/admin/accounts', requireAdminJWT, requireOwner, async (req, res) => {
     const { username, password, name, role } = req.body;
     if (!username || !password || !name) return res.status(400).json({ success: false, message: 'Username, password and name required.' });
-    if (!['owner', 'manager', 'staff'].includes(role)) return res.status(400).json({ success: false, message: 'Role must be owner, manager or staff.' });
+    if (!['owner', 'manager', 'staff', 'viewer'].includes(role)) return res.status(400).json({ success: false, message: 'Role must be owner, manager, staff or viewer.' });
     if (adminAccounts.find(a => a.username === username.trim()))
         return res.status(409).json({ success: false, message: 'Username already exists.' });
     if (password.length < 8) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
@@ -3249,7 +3272,7 @@ app.put('/api/admin/accounts/:id', requireAdminJWT, requireOwner, async (req, re
     if (acc.id === req.adminUser.id && req.body.role && req.body.role !== 'owner')
         return res.status(400).json({ success: false, message: 'You cannot change your own role.' });
     if (req.body.name)     acc.name  = req.body.name.trim();
-    if (req.body.role && ['owner','manager','staff'].includes(req.body.role)) acc.role = req.body.role;
+    if (req.body.role && ['owner','manager','staff','viewer'].includes(req.body.role)) acc.role = req.body.role;
     if (req.body.password) {
         if (req.body.password.length < 8) return res.status(400).json({ success: false, message: 'Password must be at least 8 characters.' });
         acc.passwordHash = await bcrypt.hash(req.body.password, 10);
@@ -3428,7 +3451,7 @@ app.get('/api/admin/abandoned-carts', requireAdminJWT, (req, res) => {
     const week = 7*24*60*60*1000;
     res.json(abandonedCarts.filter(c => Date.now()-c.startedAt < week && !c.recovered).sort((a,b)=>b.startedAt-a.startedAt));
 });
-app.patch('/api/admin/abandoned-carts/:id/recovered', requireAdminJWT, (req, res) => {
+app.patch('/api/admin/abandoned-carts/:id/recovered', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const cart = abandonedCarts.find(c => c.id === req.params.id);
     if (cart) { cart.recovered = true; saveJSON(ABANDONED_FILE, abandonedCarts); }
     res.json({ ok: true });
@@ -3517,6 +3540,10 @@ async function sendDailyBackup() {
     }, next-now);
     console.log(`[BACKUP] Scheduled daily backup at 23:00 (in ${Math.round((next-now)/3600000)}h)`);
 })();
+
+// Supply module (shops, supply price list, supply records) — owner/manager only
+stockMod = require('./stock')({ app, requireAdminJWT, requireManagerOrOwner, loadJSON, saveJSON, dataDir: DATA_DIR, getProducts: () => products, saveProducts: () => saveJSON(PRODUCTS_FILE, products) });
+stockMod.attach(require('./supply')({ app, requireAdminJWT, requireManagerOrOwner, loadJSON, saveJSON, dataDir: DATA_DIR, getProducts: () => products, getOrders: () => orders, hooks: stockMod.hooks }));
 
 // Health check endpoint (must be before app.listen)
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }));

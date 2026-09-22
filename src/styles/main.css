@@ -411,6 +411,7 @@
     .chip.chip-unavail { opacity: .4; cursor: not-allowed; text-decoration: line-through; }
     .chip.chip-unavail:hover { border-color: var(--border) !important; background: var(--light) !important; color: var(--muted) !important; }
     .price-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .price-unit { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: .02em; }
     .price { font-size: 20px; font-weight: 800; color: var(--dark); letter-spacing: -.02em; }
     .price-orig { font-size: 13px; color: var(--muted); text-decoration: line-through; }
     .qty-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }

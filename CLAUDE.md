@@ -1,6 +1,6 @@
 # Freeman Outlet — Project Guidelines
 
-Freeman Outlet sells genuine Fruit of the Loom undershirts, boxers, unisex socks and ladies' panties in Ghana, at outlet prices — mostly men's inventory today, organized under three categories: **Men**, **Women**, **Unisex**. **The site takes no online payment.** Customers browse, add to cart, fill in delivery details at checkout, and the order is sent straight to the store's WhatsApp — a human sales rep confirms pricing/payment and fulfils the order from there.
+Freeman Outlet sells genuine undershirts (Fruit of the Loom), boxers (Pier One, Jockey), unisex socks (Charnos) and ladies' panties (George) in Ghana, at outlet prices — the brand is a per-product field, never hard-code a single brand in copy — mostly men's inventory today, organized under three categories: **Men**, **Women**, **Unisex**. **The site takes no online payment.** Customers browse, add to cart, fill in delivery details at checkout, and the order is sent straight to the store's WhatsApp — a human sales rep confirms pricing/payment and fulfils the order from there.
 
 ## Skill Reference Rule
 
@@ -24,6 +24,17 @@ Apply the patterns, easing curves, spacing values, and component structures from
 - Checkout only requires **name, phone, and delivery address/zone** — email is optional (used for the confirmation email if given, never required to complete an order).
 - Every checkout UI must make it obvious, before the customer commits, that their order + delivery details are sent via WhatsApp and no card/mobile-money info is collected on-site.
 - Admin can still update stock, prices, categories, and view orders — that dashboard is unchanged from the base template.
+
+## Supply & Stock (private back-office tools)
+
+Freeman Outlet sits under ARILEO LIMITED and also supplies shops (30-day terms). These tools are **private** — never expose their data on the storefront.
+
+- **Supply page** `/supply.html` (mobile-first PWA: `src/pages/supply.html`, `src/js/supply*.js`, `src/styles/supply.css`; server `supply.js`, stock `stock.js`, shared `product-type.js`). Same admin login. Roles: owner/manager write; **viewer** (the boss) is read-only — enforced in `requireAdminJWT` (viewer may only GET `/api/supply/*` and `/api/admin/me`). One active session per account is intentional.
+- Data lives in `data/` (`shops`, `supplies`, `supply-*.json`, `size-guides.json`); cheque photos are stored in `data/private/cheques` and served only through the authenticated photo endpoint — never under a public mount.
+- **Prices are per 3-pack and VAT-inclusive** (Ghana 20% = VAT 15% + NHIL 2.5% + GETFund 2.5% on the tax-exclusive value). Stock, carts, rounds and invoices count **packs**. The hard-copy pad invoice number is typed by the owner; the GRA tax invoice figures are a replica (unit price / 1.2).
+- **Stock by size** (packs by product × colour × size) in pools Dome → Online / Supply (Spintex). It is **off by default**: while off, the website behaves exactly as before. Turning it on (Supply > Stock) makes website orders, rounds and deliveries move the pool numbers and makes the website hide sold-out sizes (`/api/stock/availability`). Only turn on after counting Online stock by size.
+- Practice mode tags records `practice:true`; they are invisible when it is off and can be deleted. Use it (or a scratch `DATA_DIR`) for testing — never test against real records.
+- Size guides are admin-editable data (`/api/size-guides`); the static charts in `index.html` are only a fallback.
 
 ## Brand Rules (Non-negotiable)
 

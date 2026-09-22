@@ -426,7 +426,10 @@
     document.getElementById('qv-cat').textContent  = p.category || '';
     document.getElementById('qv-name').textContent = p.name;
     document.getElementById('qv-top-title').textContent = p.name;
-    document.getElementById('qv-top-sub').textContent = 'Genuine Fruit of the Loom \u2022 Delivery fee confirmed on WhatsApp';
+    var brand = (p.brand || '').trim();
+    document.getElementById('qv-top-sub').textContent = (brand ? brand + ' \u2022 ' : '') + 'Delivery fee confirmed on WhatsApp';
+    var capLbl = document.getElementById('qv-caption-lbl'); capLbl.textContent = brand; capLbl.hidden = !brand;
+    var brandChip = document.getElementById('qv-brand-chip'); brandChip.textContent = brand ? 'Brand: ' + brand : ''; brandChip.hidden = !brand;
     qvRefreshStoreInfo();
     qvRenderInfo(p);
 
@@ -436,8 +439,8 @@
     document.getElementById('qv-sale-strip').innerHTML = onSale
       ? '<div class="sale-header"><span class="sale-pct">'+pct+'% OFF</span>&nbsp;&nbsp;Limited Sale</div>' : '';
     document.getElementById('qv-price').innerHTML = onSale
-      ? '<div class="price-was-now"><div class="price-was-row"><span class="plbl plbl-was">WAS</span>&nbsp;<span class="price-was-val">GH&#8373;'+orig.toFixed(2)+'</span></div><div class="price-now-row"><span class="plbl plbl-now">NOW</span>&nbsp;<span class="price-now-val">GH&#8373;'+curr.toFixed(2)+'</span></div></div>'
-      : '<div class="price-row"><span class="price">GH&#8373;'+curr.toFixed(2)+'</span></div>';
+      ? '<div class="price-was-now"><div class="price-was-row"><span class="plbl plbl-was">WAS</span>&nbsp;<span class="price-was-val">GH&#8373;'+orig.toFixed(2)+'</span></div><div class="price-now-row"><span class="plbl plbl-now">NOW</span>&nbsp;<span class="price-now-val">GH&#8373;'+curr.toFixed(2)+'</span><span class="price-unit"> per 3-pack</span></div></div>'
+      : '<div class="price-row"><span class="price">GH&#8373;'+curr.toFixed(2)+'</span><span class="price-unit"> per 3-pack</span></div>';
 
     var initialSizes = getVariantSizes(p, qvColor);
     qvRenderSizes(p, initialSizes);
@@ -595,11 +598,11 @@
           var picked = qvQtyVal === t.qty, unavailable = max < t.qty;
           return '<div class="qv-bundle' + (picked ? ' picked' : '') + (unavailable ? ' unavailable' : '') + '">'
             + (t.tag ? '<span class="qv-bundle-tag">' + escHtml(t.tag) + '</span>' : '')
-            + '<div class="qv-bundle-row"><span class="qv-bundle-qty">' + t.qty + ' pieces</span>'
+            + '<div class="qv-bundle-row"><span class="qv-bundle-qty">' + t.qty + ' packs</span>'
             + '<span class="qv-bundle-price"><s>GH&#8373;' + regular.toFixed(2) + '</s> GH&#8373;' + t.price.toFixed(2) + '</span></div>'
-            + '<div class="qv-bundle-meta">Save GH&#8373;' + save.toFixed(2) + ' &bull; About GH&#8373;' + per.toFixed(2) + ' per piece</div>'
+            + '<div class="qv-bundle-meta">Save GH&#8373;' + save.toFixed(2) + ' &bull; About GH&#8373;' + per.toFixed(2) + ' per pack</div>'
             + '<button type="button" class="qv-bundle-btn"' + (unavailable ? ' disabled' : '') + ' onclick="qvSelectBundle(' + t.qty + ')">'
-            + (unavailable ? 'Not enough in stock' : picked ? 'Selected \u2713' : 'Select ' + t.qty + ' pieces') + '</button></div>';
+            + (unavailable ? 'Not enough in stock' : picked ? 'Selected \u2713' : 'Select ' + t.qty + ' packs') + '</button></div>';
         }).join('');
   }
 
@@ -667,11 +670,23 @@
     btn.classList.add('active');
   }
 
+  // Size-level availability (only when the store has switched on size stock tracking); null = no restriction
+  var sizeAvail = null;
+  fetch('/api/stock/availability').then(function(r){ return r.json(); }).then(function(d){ if (d && d.tracking) sizeAvail = d.sku; }).catch(function(){});
+  function sizeSoldOut(p, color, size) {
+    if (!sizeAvail) return false;
+    var prefix = p.id + '|';
+    if (!Object.keys(sizeAvail).some(function(k){ return k.indexOf(prefix) === 0; })) return false;
+    return !(sizeAvail[p.id + '|' + (color || '') + '|' + size] > 0);
+  }
+
   // Shared by openQV (initial render) and qvPickColor (re-render after switching colour)
   function qvRenderSizes(prod, sizes) {
+    if (qvSize && sizeSoldOut(prod, qvColor, qvSize)) qvSize = '';
     document.getElementById('qv-sizes').innerHTML = (sizes && sizes.length)
       ? '<div class="variants" style="align-items:center"><span class="opts-lbl">Size</span>' + sizes.map(function(s){
-          return '<button class="chip'+(qvSize===s?' active':'')+'" onclick="qvPickSize(this,\''+escJsAttr(s)+'\')">'+escHtml(s)+'</button>';
+          var out = sizeSoldOut(prod, qvColor, s);
+          return '<button class="chip'+(qvSize===s?' active':'')+(out?' chip-unavail':'')+'"'+(out?' disabled title="Sold out"':'')+' onclick="qvPickSize(this,\''+escJsAttr(s)+'\')">'+escHtml(s)+'</button>';
         }).join('') + '<span class="size-guide-link" style="margin-left:6px" onclick="openSizeGuide(\'' + escJsAttr(prod.name||'') + '\')">Guide</span></div>'
       : '<div class="variants" style="align-items:center"><span class="size-guide-link" onclick="openSizeGuide(\'' + escJsAttr(prod.name||'') + '\')">Size Guide</span></div>';
   }
@@ -1228,13 +1243,27 @@
   // can't tell underwear from undershirts from panties from socks the way it
   // used to. Checked most-specific first so e.g. "Ladies Boxer Shorts" still
   // resolves sensibly (panty check doesn't fire, boxer check does).
+  // The charts are editable in the Supply page (Stock > Sizes) and served by /api/size-guides;
+  // the static charts in index.html are only a fallback if that request fails.
+  var sizeGuides = null;
+  fetch('/api/size-guides').then(function(r){ return r.json(); }).then(function(g){ sizeGuides = g; }).catch(function(){});
   function openSizeGuide(productName) {
     var c = (productName || '').toLowerCase();
     var chart = /sock/.test(c) ? 'sg-socks'
       : /pant(y|ies)/.test(c) ? 'sg-panties'
       : /underwear|boxer|brief|trunk/.test(c) ? 'sg-underwear'
       : 'sg-clothing';
-    ['sg-clothing', 'sg-underwear', 'sg-panties', 'sg-socks'].forEach(function(id) {
+    var guideKey = { 'sg-socks': 'socks', 'sg-panties': 'panties', 'sg-underwear': 'boxers', 'sg-clothing': 'undershirts' }[chart];
+    var g = sizeGuides && sizeGuides[guideKey];
+    var dyn = document.getElementById('sg-dynamic');
+    if (g && Array.isArray(g.columns) && Array.isArray(g.rows)) {
+      dyn.innerHTML = '<span class="sg-section">' + escHtml(g.title) + '</span><table class="sg-table"><thead><tr>'
+        + g.columns.map(function(col){ return '<th>' + escHtml(col) + '</th>'; }).join('') + '</tr></thead><tbody>'
+        + g.rows.map(function(r){ return '<tr>' + r.map(function(cell, i){ return '<td>' + (i === 0 ? '<b>' + escHtml(cell) + '</b>' : escHtml(cell)) + '</td>'; }).join('') + '</tr>'; }).join('')
+        + '</tbody></table>' + (g.note ? '<p style="font-size:11px;color:var(--muted);margin-top:10px">' + escHtml(g.note) + '</p>' : '');
+      chart = 'sg-dynamic';
+    }
+    ['sg-clothing', 'sg-underwear', 'sg-panties', 'sg-socks', 'sg-dynamic'].forEach(function(id) {
       document.getElementById(id).style.display = (id === chart) ? '' : 'none';
     });
     var modal = document.querySelector('#sg-overlay .sg-modal');
