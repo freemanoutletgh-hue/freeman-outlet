@@ -290,9 +290,32 @@
     document.getElementById('promo-msg').className = '';
     document.getElementById('promo-msg').style.display = '';
     document.getElementById('co-promo').value = '';
+    prefillCheckout();
     document.getElementById('checkout-modal').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
+
+  // Remember delivery details on this device only, so a returning customer (or someone who closed the
+  // page mid-checkout) doesn't retype them. Fields already filled in are never overwritten.
+  var CHECKOUT_KEY = 'freeman_checkout';
+  var CHECKOUT_FIELDS = { name: 'co-name', phone: 'co-phone', email: 'co-email', address: 'co-address' };
+  function saveCheckoutDetails() {
+    var d = {};
+    Object.keys(CHECKOUT_FIELDS).forEach(function(k) { var el = document.getElementById(CHECKOUT_FIELDS[k]); d[k] = el ? el.value.trim() : ''; });
+    try { localStorage.setItem(CHECKOUT_KEY, JSON.stringify(d)); } catch (e) {}
+  }
+  function prefillCheckout() {
+    var d = {};
+    try { d = JSON.parse(localStorage.getItem(CHECKOUT_KEY) || '{}') || {}; } catch (e) {}
+    Object.keys(CHECKOUT_FIELDS).forEach(function(k) {
+      var el = document.getElementById(CHECKOUT_FIELDS[k]);
+      if (el && !el.value && typeof d[k] === 'string') el.value = d[k];
+    });
+  }
+  Object.keys(CHECKOUT_FIELDS).forEach(function(k) {
+    var el = document.getElementById(CHECKOUT_FIELDS[k]);
+    if (el) el.addEventListener('input', saveCheckoutDetails);
+  });
 
   function updateCheckoutTotal() {
     const finalTotal  = Math.max(0, checkoutSubtotal - promoDiscount);
@@ -1702,8 +1725,9 @@
     if (document.getElementById('review-modal').classList.contains('open')) { closeReviewModal(); return; }
   });
 
+  // Show the shape of the grid while products load (skeleton cards) instead of a bare "Loading…" line
   if (!allProducts.length) document.getElementById('shop-grid').innerHTML =
-    '<div style="grid-column:1/-1;text-align:center;padding:56px 20px;color:var(--muted);font-size:14px">Loading products…</div>';
+    Array(8).fill('<div class="skel-card" aria-hidden="true"><div class="skel skel-img"></div><div class="skel skel-line"></div><div class="skel skel-line short"></div></div>').join('');
   // Products are loaded by the bootstrap call above — this is a fallback
   setTimeout(function() {
     if (!allProducts.length) {

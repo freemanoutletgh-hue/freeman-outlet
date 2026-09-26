@@ -211,10 +211,10 @@
 
   <!-- Slide dots -->
   <div class="hero-dots" id="hero-dots">
-    <button class="hero-dot active" onclick="heroGoTo(0)"></button>
-    <button class="hero-dot" onclick="heroGoTo(1)"></button>
-    <button class="hero-dot" onclick="heroGoTo(2)"></button>
-    <button class="hero-dot" id="hero-dot-3" onclick="heroGoTo(3)" style="display:none"></button>
+    <button class="hero-dot active" onclick="heroGoTo(0)" aria-label="Show slide 1"></button>
+    <button class="hero-dot" onclick="heroGoTo(1)" aria-label="Show slide 2"></button>
+    <button class="hero-dot" onclick="heroGoTo(2)" aria-label="Show slide 3"></button>
+    <button class="hero-dot" id="hero-dot-3" onclick="heroGoTo(3)" aria-label="Show slide 4" style="display:none"></button>
   </div>
 
   <input type="text" id="search-bar" style="display:none" readonly/>
@@ -262,7 +262,7 @@
   <div class="wrap">
     <div class="filter-bar" style="margin-top:0">
       <div class="search-row" style="max-width:100%;display:none" id="mobile-search-row">
-        <input type="text" id="mobile-search-bar" oninput="mobileSearch(this.value)" placeholder="Search products…" style="width:100%"/>
+        <input type="text" id="mobile-search-bar" aria-label="Search products" oninput="mobileSearch(this.value)" placeholder="Search products…" style="width:100%"/>
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" width="18" height="18">
           <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z"/>
         </svg>
@@ -273,7 +273,7 @@
           <button onclick="setStatusFilter('instock')" id="filter-instock" class="f-btn">In Stock</button>
           <button onclick="setStatusFilter('soldout')" id="filter-soldout" class="f-btn">Sold Out</button>
         </div>
-        <select onchange="setSort(this.value)" style="border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;font-family:var(--fb);font-size:12px;font-weight:600;color:var(--dark);background:#fff;cursor:pointer;outline:none">
+        <select aria-label="Sort products" onchange="setSort(this.value)" style="border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;font-family:var(--fb);font-size:12px;font-weight:600;color:var(--dark);background:#fff;cursor:pointer;outline:none">
           <option value="default">Sort: Default</option>
           <option value="newest">Newest first</option>
           <option value="price-asc">Price: Low → High</option>
@@ -422,19 +422,19 @@
         <div class="foot-logo" id="foot-logo-text">Freeman Outlet</div>
         <p class="foot-tagline" id="foot-tagline">Everyday Basics. Built To Last. Outlet Prices.</p>
         <div class="foot-socials">
-          <a href="#" target="_blank" class="foot-soc-btn" title="Instagram" id="foot-ig">
+          <a href="#" target="_blank" class="foot-soc-btn" title="Instagram" aria-label="Instagram" id="foot-ig">
             <iconify-icon icon="simple-icons:instagram" width="16" height="16"></iconify-icon>
           </a>
-          <a href="#" target="_blank" class="foot-soc-btn" title="Facebook" id="foot-fb">
+          <a href="#" target="_blank" class="foot-soc-btn" title="Facebook" aria-label="Facebook" id="foot-fb">
             <iconify-icon icon="simple-icons:facebook" width="16" height="16"></iconify-icon>
           </a>
-          <a href="#" target="_blank" class="foot-soc-btn" title="TikTok" id="foot-tt">
+          <a href="#" target="_blank" class="foot-soc-btn" title="TikTok" aria-label="TikTok" id="foot-tt">
             <iconify-icon icon="simple-icons:tiktok" width="16" height="16"></iconify-icon>
           </a>
-          <a href="#" target="_blank" class="foot-soc-btn" title="Snapchat" id="foot-sc">
+          <a href="#" target="_blank" class="foot-soc-btn" title="Snapchat" aria-label="Snapchat" id="foot-sc">
             <iconify-icon icon="simple-icons:snapchat" width="16" height="16"></iconify-icon>
           </a>
-          <a href="https://wa.me/" target="_blank" class="foot-soc-btn" title="WhatsApp" id="foot-wa">
+          <a href="https://wa.me/" target="_blank" class="foot-soc-btn" title="WhatsApp" id="foot-wa" aria-label="WhatsApp">
             <iconify-icon icon="simple-icons:whatsapp" width="16" height="16"></iconify-icon>
           </a>
         </div>
@@ -514,20 +514,20 @@
       </div>
       <div class="form-grid2">
         <div class="form-group">
-          <label>Your Name *</label>
+          <label for="rev-name">Your Name *</label>
           <input type="text" id="rev-name" placeholder="Ama Asante"/>
         </div>
         <div class="form-group">
-          <label>Location <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+          <label for="rev-location">Location <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
           <input type="text" id="rev-location" placeholder="Accra, Ghana"/>
         </div>
       </div>
       <div class="form-group">
-        <label>Order Email or Phone * <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">— must match the email or phone you ordered with</span></label>
+        <label for="rev-email">Order Email or Phone * <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--muted)">— must match the email or phone you ordered with</span></label>
         <input type="text" id="rev-email" placeholder="you@example.com or 0244 123 456"/>
       </div>
       <div class="form-group">
-        <label>Your Review *</label>
+        <label for="rev-message">Your Review *</label>
         <textarea id="rev-message" rows="4" placeholder="Tell us about your experience with the product and delivery…"></textarea>
       </div>
       <button class="btn-pay" onclick="submitReview()">
@@ -616,7 +616,7 @@
       </table>
       <p style="font-size:11px;color:var(--muted);margin-top:10px">Most of our socks are one-size-fits-most and stretch to accommodate a range of shoe sizes. Check the specific product's packaging photo for exact sizing, since this can vary by style.</p>
     </div>
-    <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px">Not sure? Message us on <a href="https://wa.me/" target="_blank" id="sg-wa" style="color:var(--accent);font-weight:600">WhatsApp</a> and we'll help you find the right fit.</p>
+    <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:12px">Not sure? Message us on <a href="https://wa.me/" target="_blank" id="sg-wa" style="color:var(--accent-text);font-weight:600">WhatsApp</a> and we'll help you find the right fit.</p>
   </div>
 </div>
 
@@ -674,25 +674,25 @@
       </div>
       <div class="form-grid2">
         <div class="form-group">
-          <label>Full Name *</label>
-          <input type="text" id="co-name" placeholder="Ama Asante"/>
+          <label for="co-name">Full Name *</label>
+          <input type="text" id="co-name" placeholder="Ama Asante" autocomplete="name"/>
         </div>
         <div class="form-group">
-          <label>Phone *</label>
-          <input type="tel" id="co-phone" placeholder="0559 304 546"/>
+          <label for="co-phone">Phone *</label>
+          <input type="tel" id="co-phone" placeholder="0559 304 546" autocomplete="tel"/>
         </div>
       </div>
       <div class="form-group">
-        <label>Email (optional)</label>
-        <input type="email" id="co-email" placeholder="ama@email.com"/>
+        <label for="co-email">Email (optional)</label>
+        <input type="email" id="co-email" placeholder="ama@email.com" autocomplete="email"/>
       </div>
       <div class="form-group">
-        <label id="co-address-label">Delivery Address *</label>
-        <input type="text" id="co-address" placeholder="Paste Google Maps / Yango / GPS link or describe your exact location"/>
-        <p style="font-size:11px;color:#888;margin:5px 0 0;line-height:1.5">Share a <strong>Google Maps link</strong>, <strong>Yango address</strong>, or GPS coordinates so we can find you easily.</p>
+        <label id="co-address-label" for="co-address">Delivery Address *</label>
+        <input type="text" id="co-address" placeholder="Paste Google Maps / Yango / GPS link or describe your exact location" autocomplete="street-address"/>
+        <p style="font-size:12px;color:var(--muted);margin:5px 0 0;line-height:1.5">Share a <strong>Google Maps link</strong>, <strong>Yango address</strong>, or GPS coordinates so we can find you easily.</p>
       </div>
       <div class="form-group">
-        <label>Order Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
+        <label for="co-notes">Order Notes <span style="font-weight:400;text-transform:none;letter-spacing:0">(optional)</span></label>
         <textarea id="co-notes" rows="2" placeholder="Any special instructions…"></textarea>
       </div>
       <div class="promo-row">
@@ -816,11 +816,11 @@
     <div class="modal-body">
       <p style="font-size:14px;color:var(--muted);margin-bottom:4px">We'll message you on WhatsApp the moment <strong id="notify-product-name"></strong> is back in stock.</p>
       <div class="form-group" style="margin-top:16px">
-        <label>Your Name *</label>
+        <label for="notify-name">Your Name *</label>
         <input type="text" id="notify-name" placeholder="Full name"/>
       </div>
       <div class="form-group">
-        <label>Phone Number (WhatsApp) *</label>
+        <label for="notify-phone">Phone Number (WhatsApp) *</label>
         <input type="tel" id="notify-phone" placeholder="e.g. 0244 123 456"/>
       </div>
       <input type="hidden" id="notify-product-id"/>
@@ -842,7 +842,7 @@
     <p>Thank you for shopping with Freeman Outlet!</p>
     <div class="success-ref" id="success-ref">—</div>
     <div style="margin:20px 0;text-align:left;background:var(--light);border-radius:12px;padding:16px 20px">
-      <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:12px">What happens next</p>
+      <p style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent-text);margin-bottom:12px">What happens next</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div style="display:flex;gap:12px;align-items:flex-start;font-size:13px">
           <span style="font-size:18px;line-height:1">✓</span>
@@ -886,14 +886,14 @@
         <div id="g-signin-btn" style="display:flex;justify-content:center;margin-bottom:14px"></div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
           <div style="flex:1;height:1px;background:var(--border)"></div>
-          <span style="font-size:11px;color:#aaa;font-family:var(--fb);white-space:nowrap">or sign in with email</span>
+          <span style="font-size:12px;color:var(--muted);font-family:var(--fb);white-space:nowrap">or sign in with email</span>
           <div style="flex:1;height:1px;background:var(--border)"></div>
         </div>
         <div class="acct-field"><input type="email"    id="acct-login-email" placeholder="Email address" autocomplete="email"/></div>
         <div class="acct-field"><input type="password" id="acct-login-pass"  placeholder="Password" autocomplete="current-password"/></div>
         <div id="acct-login-err" class="acct-err" style="display:none"></div>
         <button class="acct-submit" id="acct-login-btn" onclick="accountLogin()">Sign In</button>
-        <p style="text-align:center;margin-top:10px;font-size:12px"><button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:var(--fb)">Forgot password?</button></p>
+        <p style="text-align:center;margin-top:10px;font-size:12px"><button onclick="showForgotPassword()" style="background:none;border:none;color:var(--accent-text);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:var(--fb)">Forgot password?</button></p>
       </div>
 
       <!-- Forgot password form -->
@@ -902,7 +902,7 @@
         <div class="acct-field"><input type="email" id="acct-forgot-email" placeholder="Email address" autocomplete="email"/></div>
         <div id="acct-forgot-msg" style="display:none;font-size:13px;margin-bottom:10px"></div>
         <button class="acct-submit" onclick="sendForgotPassword()">Send Reset Link</button>
-        <p style="text-align:center;margin-top:10px;font-size:12px"><button onclick="switchAcctTab('login')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:var(--fb)">← Back to sign in</button></p>
+        <p style="text-align:center;margin-top:10px;font-size:12px"><button onclick="switchAcctTab('login')" style="background:none;border:none;color:var(--accent-text);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;font-family:var(--fb)">← Back to sign in</button></p>
       </div>
 
       <div id="acct-reg-form" style="display:none">
@@ -963,9 +963,9 @@
       </div>
 
       <div id="acct-profile-section" style="display:none">
-        <div class="acct-field"><label>Name</label><input type="text" id="acct-prof-name" placeholder="Full name"/></div>
-        <div class="acct-field"><label>Phone</label><input type="tel" id="acct-prof-phone" placeholder="0559 304 546"/></div>
-        <div class="acct-field"><label>Default Address</label><input type="text" id="acct-prof-addr" placeholder="e.g. East Legon, Accra or Google Maps link"/></div>
+        <div class="acct-field"><label for="acct-prof-name">Name</label><input type="text" id="acct-prof-name" placeholder="Full name"/></div>
+        <div class="acct-field"><label for="acct-prof-phone">Phone</label><input type="tel" id="acct-prof-phone" placeholder="0559 304 546"/></div>
+        <div class="acct-field"><label for="acct-prof-addr">Default Address</label><input type="text" id="acct-prof-addr" placeholder="e.g. East Legon, Accra or Google Maps link"/></div>
         <div id="acct-prof-msg" style="display:none"></div>
         <button class="acct-submit" onclick="saveProfile()">Save Changes</button>
 

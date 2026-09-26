@@ -195,3 +195,26 @@ tr.short td { background: #FEF2F2; }
 .grid2.pools .stat b { font-size: 24px; }
 @media (max-width: 480px) { th, td { padding: 10px 6px; } th { letter-spacing: .04em; } }
 @media (max-width: 480px) { th, td { padding: 10px 6px; } th { letter-spacing: .04em; } }
+
+/* skeleton loaders */
+.skel { background: linear-gradient(90deg, var(--light) 25%, var(--border) 50%, var(--light) 75%); background-size: 400px 100%; animation: skel-shimmer 1.4s infinite linear; border-radius: 12px; }
+.skel-wrap { display: grid; gap: 14px; }
+.skel-title { height: 28px; width: 45%; }
+.skel-card-lg { height: 120px; }
+.skel-card-sm { height: 72px; }
+@keyframes skel-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+/* accessibility: readable badge text, visible keyboard focus, 16px inputs (no iPhone zoom), 44px touch targets */
+:root { --danger-dark: #B91C1C; --accent-text: #7A5A0F; }
+.badge { font-size: 12px; }
+.badge.red { color: var(--danger-dark); }
+.badge.gold { color: var(--accent-text); }
+label, .stat span, .matrix .cl { font-size: 12px; }
+input[type=text], input[type=number], input[type=date], input[type=month], input[type=password], input[type=search], select, textarea { font-size: 16px; }
+.btn.small { min-height: 44px; }
+.brand, .toplink { display: inline-flex; align-items: center; min-height: 44px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, summary:focus-visible, .list-item:focus-visible, .chip:focus-visible { outline: 3px solid var(--dark); outline-offset: 2px; }
+.topbar a:focus-visible, .sticky-bar :focus-visible, .btn.primary:focus-visible { outline-color: var(--white); }
+.bottomnav a:focus-visible { outline-offset: -3px; }
+.chip { min-height: 44px; }

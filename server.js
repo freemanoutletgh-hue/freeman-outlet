@@ -3548,6 +3548,24 @@ stockMod.attach(require('./supply')({ app, requireAdminJWT, requireManagerOrOwne
 // Health check endpoint (must be before app.listen)
 app.get('/api/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
+// Nothing matched: a friendly branded page for browsers, a clean JSON body for API calls
+app.use((req, res) => {
+    if (req.path.startsWith('/api/')) return res.status(404).json({ success: false, message: 'That request could not be found.' });
+    res.status(404).sendFile(path.join(__dirname, 'src', 'pages', '404.html'));
+});
+
+// Last-resort error handler: log the real error, but never show visitors a stack trace or raw server message
+app.use((err, req, res, next) => {
+    console.error('[ERROR]', req.method, req.originalUrl, err && err.stack ? err.stack : err);
+    if (res.headersSent) return next(err);
+    const status = err && (err.status || err.statusCode) >= 400 && (err.status || err.statusCode) < 600 ? (err.status || err.statusCode) : 500;
+    if (req.path.startsWith('/api/') || (req.headers.accept || '').includes('application/json')) {
+        const bad = status >= 400 && status < 500;
+        return res.status(status).json({ success: false, message: bad ? 'That request could not be processed. Please check what you sent and try again.' : 'Something went wrong on our side. Please try again in a moment.' });
+    }
+    res.status(status).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Something went wrong — Freeman Outlet</title></head><body style="font-family:sans-serif;text-align:center;padding:64px 24px;color:#1A1A1A"><h1 style="font-size:24px">Something went wrong</h1><p style="color:#6B6B6B">Please try again in a moment. Your cart is safe.</p><p><a href="/" style="color:#1A1A1A;font-weight:600">Back to the shop</a></p></body></html>');
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Control-Center Shop running on http://localhost:${PORT}`);
     // Keep-alive ping every 10 minutes — prevents server from slowing down under low traffic

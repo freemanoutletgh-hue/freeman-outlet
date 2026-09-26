@@ -1,5 +1,5 @@
     :root {
-      --accent: #C9971C; --accent2: #A67C15;
+      --accent: #C9971C; --accent2: #A67C15; --accent-text: #7A5A0F;
       --navy: #1A1A1A;
       --wa: #0F7A6E; --wa-dark: #0B5F55; /* WhatsApp brand exception */
       --light: #F2F2F2; --white: #fff;
@@ -639,7 +639,7 @@
     .acct-field label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:5px; }
     .acct-field input { width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:10px; font-family:var(--fb); font-size:14px; color:var(--dark); background:#fff; box-sizing:border-box; transition:border-color .2s; }
     .acct-field input:focus { outline:none; border-color:var(--accent); }
-    .acct-submit { width:100%; padding:13px; background:var(--accent); color:#fff; border:none; border-radius:10px; font-family:var(--fb); font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s; margin-top:4px; }
+    .acct-submit { width:100%; padding:13px; background:var(--accent); color:var(--dark); border:none; border-radius:10px; font-family:var(--fb); font-size:14px; font-weight:700; cursor:pointer; transition:opacity .2s; margin-top:4px; }
     .acct-submit:hover { opacity:.9; }
     .acct-submit:disabled { opacity:.55; cursor:not-allowed; }
     .acct-err { background:#fef2f2; border:1px solid #fecaca; border-radius:8px; padding:10px 12px; font-size:12px; color:#dc2626; margin-bottom:10px; line-height:1.5; }
@@ -1021,3 +1021,11 @@
     @media (prefers-reduced-motion: reduce) {
       .wa-island, .wa-island-label, .shop-tile { transition: none; }
     }
+    /* skeleton loaders */
+    .skel { background: linear-gradient(90deg, var(--light) 25%, var(--border) 50%, var(--light) 75%); background-size: 400px 100%; animation: skel-shimmer 1.4s infinite linear; border-radius: 8px; }
+    .skel-card { display: flex; flex-direction: column; gap: 10px; }
+    .skel-img { aspect-ratio: 5 / 6; border-radius: 12px; }
+    .skel-line { height: 12px; width: 80%; }
+    .skel-line.short { width: 45%; }
+    @keyframes skel-shimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
+    @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }

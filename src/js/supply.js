@@ -21,7 +21,11 @@
   function fmtDate(s) { return s ? new Date(s + 'T00:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : ''; }
   function addDays(s, n) { var d = new Date(s + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
   function daysBetween(a, b) { return Math.round((new Date(b + 'T00:00:00Z') - new Date(a + 'T00:00:00Z')) / 86400000); }
-  function toast(msg, isErr) { var t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' error' : ''); clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = 'toast'; }, 3400); }
+  // While a screen is loading it shows grey placeholder shapes; if the load fails, that space becomes a clear message with a retry
+  var SKELETON = '<div class="skel-wrap" aria-hidden="true"><div class="skel skel-title"></div><div class="skel skel-card-lg"></div><div class="skel skel-card-lg"></div><div class="skel skel-card-sm"></div></div>';
+  function toast(msg, isErr) {
+    if (isErr && $('#app .skel-wrap')) app.innerHTML = '<div class="card center"><h2>Could not load this</h2><p class="sub">' + esc(msg) + '</p><div class="actions"><button class="btn primary" data-act="retry-route">Try again</button><a class="btn" href="#/">Home</a></div></div>';
+    var t = $('#toast'); t.textContent = msg; t.className = 'toast show' + (isErr ? ' error' : ''); clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = 'toast'; }, 3400); }
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
@@ -140,7 +144,7 @@
     window.scrollTo(0, 0);
     var writeOnly = { round: 1, visit: 1, pickup: 1 };
     if (!S.canWrite && writeOnly[name]) { location.hash = '#/'; return; }
-    if (V[name]) return V[name](parts);
+    if (V[name]) { app.innerHTML = SKELETON; return V[name](parts); }
     location.hash = '#/';
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden && token && S.me) refreshData().catch(function () {}); });
@@ -216,6 +220,7 @@
   A['retry-queue'] = function () { flushQueue().then(V.home); };
   A['todo-visit'] = function (t) { if (!S.round) { toast('Load a round first.', true); location.hash = '#/round'; return; } visit = newVisit(); visit.shopId = t.dataset.id; visit.step = 2; location.hash = '#/visit'; renderVisit(); };
   A.reload = boot;
+  A['retry-route'] = function () { route(); };
   A['open-supply'] = function (t) { location.hash = '#/supply/' + t.dataset.id; };
   A.print = function () { window.print(); };
 
