@@ -79,6 +79,7 @@
             <div class="flex items-center gap-3 flex-wrap">
                 <!-- Online indicator -->
                 <div id="admin-online-indicator" style="display:none;align-items:center;background:#fff7f2;border:1px solid #fbd9c6;border-radius:20px;padding:4px 10px 4px 6px;gap:0" title="Other admins currently online"></div>
+                <a id="admin-sales-link" href="/sales.html" style="display:none" class="flex items-center gap-1.5 text-xs font-bold text-gray-900 border border-gray-900 hover:bg-gray-900 hover:text-white px-3 py-2 rounded-xl transition-colors">Sales</a>
                 <a id="admin-supply-link" href="/supply.html" style="display:none" class="relative flex items-center gap-1.5 text-xs font-bold text-gray-900 border border-gray-900 hover:bg-gray-900 hover:text-white px-3 py-2 rounded-xl transition-colors">Supply<span id="admin-supply-badge" style="display:none" class="ml-1 min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-gray-900 text-[11px] leading-[18px] text-center"></span></a>
                 <span id="admin-logged-in-name" class="text-xs text-gray-400 font-semibold hidden sm:inline"></span>
                 <button onclick="adminLogout()" class="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-red-500 border border-gray-200 hover:border-red-200 px-3 py-2 rounded-xl transition-colors">
@@ -152,7 +153,6 @@
         <!-- Primary group navigation -->
         <div id="group-nav" class="flex gap-2 mb-2 bg-white border border-gray-100 rounded-2xl p-2 shadow-sm overflow-x-auto">
             <button onclick="switchGroup('catalogue')" id="grp-catalogue" class="grp-btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap">Catalogue</button>
-            <button onclick="switchGroup('sales')"     id="grp-sales"     class="grp-btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap">Sales</button>
             <button onclick="switchGroup('customers')" id="grp-customers" class="grp-btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap">Customers</button>
             <button onclick="switchGroup('content')"   id="grp-content"   class="grp-btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap">Content</button>
             <button onclick="switchGroup('insights')"  id="grp-insights"  class="grp-btn flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap">Insights</button>
@@ -1339,6 +1339,31 @@
           </div>
         </div>
 
+        <!-- STOCK BY SIZE: RECEIVE / MOVE / COUNT MODAL (Dome → Spintex) -->
+        <div id="stock-action-modal" onclick="if(event.target===this)closeStockActionModal()" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h3 id="stock-action-title" class="text-base font-bold text-gray-900">Receive a delivery</h3>
+                <p id="stock-action-intro" class="text-xs text-gray-400 mt-0.5"></p>
+              </div>
+              <button onclick="closeStockActionModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold leading-none">✕</button>
+            </div>
+            <div class="overflow-y-auto flex-1 px-6 py-4">
+              <div id="stock-action-pool-picker"></div>
+              <input type="search" id="stock-action-search" placeholder="Search products" oninput="stockActionSearch(this.value)" class="w-full mb-3 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-300"/>
+              <div id="stock-action-list"></div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex-shrink-0">
+              <p id="stock-action-err" class="text-xs text-red-500 mb-2"></p>
+              <div class="flex gap-3">
+                <button onclick="closeStockActionModal()" class="flex-1 border border-gray-200 text-gray-600 text-sm font-semibold py-2.5 rounded-xl hover:bg-gray-50 transition">Cancel</button>
+                <button onclick="saveStockAction()" class="flex-1 bg-gray-900 hover:bg-orange-500 text-white text-sm font-semibold py-2.5 rounded-xl transition">Save</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- STOCK ADJUSTMENT REASON MODAL -->
         <div id="adj-modal" onclick="if(event.target===this)closeAdjModal()" class="hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
@@ -1691,8 +1716,8 @@
                   <input type="text" id="set-trust-1" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 transition font-mono">
                 </div>
                 <div>
-                  <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Trust Badge 2 </label>
-                  <input type="text" id="set-trust-2" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-amber-500 transition font-mono">
+                  <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Trust Badge 2 (free delivery)</label>
+                  <p class="text-xs text-gray-400 px-1">Not editable here — it's always generated from the "Free Delivery Threshold" and "Free Delivery Zone" fields below, so it can't go stale.</p>
                 </div>
                 <div>
                   <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Trust Badge 3 </label>

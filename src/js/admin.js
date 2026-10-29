@@ -57,6 +57,7 @@
                         localStorage.setItem('_adminUser', d.username);
                         localStorage.setItem('_adminRole', d.role);
                         if (d.role === 'viewer') { location.href = '/supply.html'; return; }
+                        if (d.role === 'staff') { location.href = '/sales.html'; return; }
                         startAdminApp(d.role);
                         startOnlinePoll();
                         showSupplyLink(d.role);
@@ -81,6 +82,8 @@
                     if (b && d && d.count > 0) { b.textContent = d.count; b.style.display = ''; }
                 })
                 .catch(() => {});
+            const salesLink = document.getElementById('admin-sales-link');
+            if (salesLink) salesLink.style.display = '';
         }
 
         function adminLogout() {
@@ -107,6 +110,7 @@
                         localStorage.setItem('_adminUser', me.username);
                         localStorage.setItem('_adminRole', me.role);
                         if (me.role === 'viewer') { location.href = '/supply.html'; return; }
+                        if (me.role === 'staff') { location.href = '/sales.html'; return; }
                         startAdminApp(me.role);
                         startOnlinePoll();
                         showSupplyLink(me.role);
@@ -211,7 +215,6 @@
         // ── GROUP NAV ────────────────────────────────────────────────────────
         const GROUPS = {
             catalogue: { label: 'Catalogue', tabs: ['products', 'categories', 'stock'] },
-            sales:     { label: 'Sales',     tabs: ['orders', 'invoice', 'codes'] },
             customers: { label: 'Customers', tabs: ['customers', 'reviews', 'notify'] },
             content:   { label: 'Content',   tabs: ['images', 'faq'] },
             insights:  { label: 'Insights',  tabs: ['analytics', 'product-analytics'] },
@@ -344,18 +347,14 @@
                 currentAdminRole = knownRole;
                 applyRoleRestrictions(knownRole);
             }
+            // Staff never reaches here — they're redirected to /sales.html at login (see initAdminAuth/adminLogin).
             // Always call switchGroup immediately so the correct section shows on first render
-            if (knownRole === 'staff') {
-                localStorage.setItem('adminLastGroup', 'sales'); // pin staff to Sales
-                switchGroup('sales');
-            } else {
-                const lastGroup = localStorage.getItem('adminLastGroup');
-                switchGroup((lastGroup && GROUPS[lastGroup]) ? lastGroup : 'catalogue');
-            }
+            const lastGroup = localStorage.getItem('adminLastGroup');
+            switchGroup((lastGroup && GROUPS[lastGroup]) ? lastGroup : 'catalogue');
             initAdminRole(); // async confirm + update name display
             // Always load stats for the dashboard header cards
             loadOrders();
-            if (knownRole !== 'staff') loadInventory();
+            loadInventory();
         }
 
         window.addEventListener('DOMContentLoaded', () => {
@@ -2881,31 +2880,118 @@
             const box = document.getElementById('pool-panel');
             if (!box) return;
             if (!poolCache) { box.innerHTML = ''; return; }
-            const t = poolCache.totals, all = t.dome + t.online + t.supply;
-            const worth = poolCache.products.reduce((s, x) => { const pr = parseFloat((stockCache.find(p => p.id === x.id) || {}).price) || 0; return s + (x.totals.dome + x.totals.online + x.totals.supply) * pr; }, 0);
+            const t = poolCache.totals, all = t.dome + t.spintex;
+            const worth = poolCache.products.reduce((s, x) => { const pr = parseFloat((stockCache.find(p => p.id === x.id) || {}).price) || 0; return s + (x.totals.dome + x.totals.spintex) * pr; }, 0);
             const card = (label, n, sub, cls) => '<div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4"><p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">' + label + '</p><p class="text-2xl font-bold ' + (cls || 'text-gray-900') + ' mt-1">' + n + '</p><p class="text-[10px] text-gray-400 mt-0.5">' + sub + '</p></div>';
             const banner = poolCache.tracking
-                ? '<b>Size stock is on.</b> The website sells from the Online pool, by size. To change these numbers use Supply &rsaquo; Stock (receive a delivery, move stock, count).'
-                : '<b>Size stock has not been started.</b> The website still uses the numbers typed in the table below. Main and Supply stock are recorded in Supply &rsaquo; Stock; start tracking there once Online stock is counted by size.';
-            box.innerHTML = '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">'
-                + card('Main stock (Dome)', t.dome, 'packs in the warehouse')
-                + card('Online (website)', t.online, 'packs at Spintex', 'text-orange-500')
-                + card('Supply (shops)', t.supply, 'packs at Spintex')
+                ? '<b>Size stock is on.</b> Sales and Supply both sell from Spintex, by size. The website only offers sizes Spintex has.'
+                : '<b>Size stock has not been started.</b> The website still uses the numbers typed in the table below. Receive and count stock below, then start tracking once Spintex is counted by size.';
+            box.innerHTML = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">'
+                + card('Dome (warehouse)', t.dome, 'packs')
+                + card('Spintex', t.spintex, 'packs — Sales and Supply draw from here', 'text-orange-500')
                 + card('All locations', all, 'packs · sell value GH₵' + worth.toLocaleString('en-GH', { maximumFractionDigits: 0 }))
                 + '</div>'
-                + '<div class="flex items-center justify-between gap-3 flex-wrap rounded-xl border ' + (poolCache.tracking ? 'border-gray-200 bg-white' : 'border-amber-200 bg-amber-50') + ' px-4 py-3 text-xs text-gray-600">'
+                + '<div class="flex items-center justify-between gap-3 flex-wrap rounded-xl border ' + (poolCache.tracking ? 'border-gray-200 bg-white' : 'border-amber-200 bg-amber-50') + ' px-4 py-3 text-xs text-gray-600 mb-3">'
                 + '<span>' + banner + '</span>'
-                + (poolCache.canManage ? '<a href="/supply.html#/stock" class="font-bold text-gray-900 hover:underline whitespace-nowrap">Open Supply stock &rarr;</a>' : '')
-                + '</div>';
+                + (poolCache.canManage && !poolCache.tracking ? '<button onclick="startPoolTracking()" class="font-bold text-gray-900 hover:underline whitespace-nowrap">Start tracking &rarr;</button>' : '')
+                + (poolCache.canManage && poolCache.tracking ? '<button onclick="stopPoolTracking()" class="font-semibold text-gray-400 hover:text-gray-700 whitespace-nowrap">Turn off</button>' : '')
+                + '</div>'
+                + (poolCache.canManage ? '<div class="flex flex-wrap gap-2 mb-3"><button onclick="openStockActionModal(\'intake\')" class="text-xs font-bold px-4 py-2 rounded-xl bg-gray-900 text-white hover:bg-orange-500 transition">+ Receive delivery (into Dome)</button><button onclick="openStockActionModal(\'move\')" class="text-xs font-bold px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-orange-300 transition">Move Dome &rarr; Spintex</button><button onclick="openStockActionModal(\'count\')" class="text-xs font-bold px-4 py-2 rounded-xl bg-white border border-gray-200 text-gray-700 hover:border-orange-300 transition">Count stock</button></div>' : '');
         }
         function poolMatrixHtml(p) {
             const pp = poolProduct(p.id);
             const sizes = []; pp.colours.forEach(c => c.sizes.forEach(s => { if (!sizes.includes(s)) sizes.push(s); }));
-            const cell = (c, s) => { const r = pp.skus[c + '|' + s]; if (!r) return '<td class="px-2 py-1 text-center text-gray-300">—</td>'; return '<td class="px-2 py-1 text-center"><b class="' + (r.online === 0 ? 'text-red-500' : 'text-gray-900') + '">' + r.online + '</b><span class="block text-[10px] text-gray-400">' + r.dome + ' main · ' + r.supply + ' supply</span></td>'; };
-            return '<p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Stock by size — ' + escAdm(p.name) + ' <span class="normal-case font-normal text-gray-400">(big number = Online, changed in Supply &rsaquo; Stock)</span></p>'
+            const cell = (c, s) => { const r = pp.skus[c + '|' + s]; if (!r) return '<td class="px-2 py-1 text-center text-gray-300">—</td>'; return '<td class="px-2 py-1 text-center"><b class="' + (r.spintex === 0 ? 'text-red-500' : 'text-gray-900') + '">' + r.spintex + '</b><span class="block text-[10px] text-gray-400">' + r.dome + ' dome</span></td>'; };
+            return '<p class="text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-2">Stock by size — ' + escAdm(p.name) + ' <span class="normal-case font-normal text-gray-400">(big number = Spintex)</span></p>'
               + '<div class="overflow-x-auto"><table class="text-xs bg-white border border-gray-200 rounded-xl"><thead><tr><th class="px-2 py-1"></th>' + sizes.map(s => '<th class="px-2 py-1 text-gray-500">' + escAdm(s || 'Packs') + '</th>').join('') + '</tr></thead><tbody>'
               + pp.colours.map(c => '<tr><td class="px-2 py-1 font-semibold text-gray-700">' + escAdm(c.name || '—') + '</td>' + sizes.map(s => cell(c.name, s)).join('') + '</tr>').join('')
               + '</tbody></table></div>';
+        }
+        function startPoolTracking() {
+            requireAdminConfirm('Start tracking stock by size', 'Sales and Supply will both sell from the Spintex pool by size. Only do this after counting Spintex stock by size — otherwise everything will show as sold out.', () => {
+                fetch('/api/supply/stock/tracking', { method: 'PUT', headers: adminHeaders(), body: JSON.stringify({ on: true, confirm: true }) }).then(r => r.json()).then(d => {
+                    if (d.success) { showToast('Stock tracking is on.'); loadStock(); } else showToast(d.message || 'Failed.', true);
+                });
+            });
+        }
+        function stopPoolTracking() {
+            fetch('/api/supply/stock/tracking', { method: 'PUT', headers: adminHeaders(), body: JSON.stringify({ on: false }) }).then(r => r.json()).then(d => {
+                if (d.success) { showToast('Tracking is off.'); loadStock(); } else showToast(d.message || 'Failed.', true);
+            });
+        }
+
+        // ── RECEIVE DELIVERY / MOVE DOME→SPINTEX / COUNT STOCK ───────────────
+        // These used to live on the Supply page; only Admin changes stock directly now.
+        let stockActionState = null;
+        function stockActionFieldFor(kind) { return kind === 'intake' ? 'received' : kind === 'move' ? 'packs' : 'counted'; }
+        function openStockActionModal(kind) {
+            stockActionState = { kind, cells: {}, q: '', pool: 'spintex' };
+            renderStockActionModal();
+            const m = document.getElementById('stock-action-modal');
+            m.classList.remove('hidden'); m.style.display = 'flex';
+        }
+        function closeStockActionModal() {
+            const m = document.getElementById('stock-action-modal');
+            m.style.display = 'none'; m.classList.add('hidden'); stockActionState = null;
+        }
+        function renderStockActionModal() {
+            const s = stockActionState; if (!s || !poolCache) return;
+            const title = s.kind === 'intake' ? 'Receive a delivery' : s.kind === 'move' ? 'Move Dome → Spintex' : 'Count stock';
+            const field = stockActionFieldFor(s.kind);
+            const q = s.q.toLowerCase();
+            const prods = poolCache.products.filter(p => !q || (p.name + ' ' + (p.brand || '')).toLowerCase().includes(q));
+            document.getElementById('stock-action-title').textContent = title;
+            document.getElementById('stock-action-intro').textContent = s.kind === 'intake' ? 'Enter what came in, by colour and size. It all goes into Dome.' : s.kind === 'move' ? 'Enter the packs to move from Dome into Spintex.' : 'Enter what you counted in ' + (s.pool === 'dome' ? 'Dome' : 'Spintex') + '. Only sizes you fill in are changed.';
+            const poolPicker = s.kind === 'count' ? `<div class="mb-3"><label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Which pool did you count?</label><select id="stock-action-pool" onchange="stockActionState.pool=this.value;renderStockActionModal()" class="border border-gray-200 rounded-lg px-3 py-2 text-xs"><option value="spintex"${s.pool === 'spintex' ? ' selected' : ''}>Spintex</option><option value="dome"${s.pool === 'dome' ? ' selected' : ''}>Dome</option></select></div>` : '';
+            document.getElementById('stock-action-pool-picker').innerHTML = poolPicker;
+            document.getElementById('stock-action-list').innerHTML = prods.map(p => {
+                const sizes = []; p.colours.forEach(c => c.sizes.forEach(sz => { if (!sizes.includes(sz)) sizes.push(sz); }));
+                const rows = p.colours.map(c => {
+                    const cells = sizes.map(sz => {
+                        const sku = c.sizes.includes(sz) ? (c.name + '|' + sz) : null; if (!sku) return '<td class="px-1 py-1 text-center text-gray-300">—</td>';
+                        const k = p.id + '|' + sku, r = p.skus[sku] || { dome: 0, spintex: 0 };
+                        const cur = stockActionState.cells[k]; const val = cur && cur[field] != null ? cur[field] : '';
+                        const ph = s.kind === 'count' ? String(r[s.pool]) : '0';
+                        return `<td class="px-1 py-1"><input type="number" min="0" step="1" value="${val}" placeholder="${ph}" data-k="${escAdm(k)}" oninput="stockActionCellInput(this)" class="w-14 border border-gray-200 rounded-lg px-1 py-1 text-xs text-center focus:outline-none focus:ring-2 focus:ring-orange-300"/></td>`;
+                    }).join('');
+                    return `<tr><td class="px-2 py-1 text-xs font-semibold text-gray-600 whitespace-nowrap">${escAdm(c.name || 'Packs')}</td>${cells}</tr>`;
+                }).join('');
+                return `<details class="bg-gray-50 rounded-xl p-2.5 mb-2"><summary class="text-xs font-semibold text-gray-800 cursor-pointer">${escAdm(p.name)}${p.brand ? ' <span class="text-gray-400 font-normal">· ' + escAdm(p.brand) + '</span>' : ''}</summary><div class="overflow-x-auto mt-2"><table class="text-xs"><thead><tr><th></th>${sizes.map(sz => '<th class="px-1 text-gray-400">' + escAdm(sz || 'Packs') + '</th>').join('')}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
+            }).join('') || '<p class="text-xs text-gray-400 text-center py-6">No products found.</p>';
+        }
+        function stockActionCellInput(el) {
+            const k = el.dataset.k, field = stockActionFieldFor(stockActionState.kind);
+            const n = Math.max(0, parseInt(el.value, 10) || 0);
+            const c = stockActionState.cells[k] || (stockActionState.cells[k] = {});
+            if (el.value === '') delete c[field]; else c[field] = n;
+            if (!Object.keys(c).length) delete stockActionState.cells[k];
+        }
+        function stockActionSearch(val) { stockActionState.q = val; renderStockActionModal(); const el = document.getElementById('stock-action-search'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+        function saveStockAction() {
+            const s = stockActionState, err = document.getElementById('stock-action-err'); err.textContent = '';
+            const splitKey = k => { const parts = k.split('|'); return { productId: parts[0], colour: parts[1], size: parts[2] }; };
+            if (s.kind === 'intake') {
+                const lines = Object.keys(s.cells).map(k => { const sk = splitKey(k), c = s.cells[k]; return { productId: sk.productId, colour: sk.colour, size: sk.size, received: c.received || 0 }; }).filter(l => l.received > 0);
+                if (!lines.length) { err.textContent = 'Enter how many packs you received.'; return; }
+                fetch('/api/supply/stock/intake', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ lines }) }).then(r => r.json()).then(d => {
+                    if (!d.success) { err.textContent = d.message || 'Failed.'; return; }
+                    showToast(d.intake.totals.added + ' packs added to Dome.'); closeStockActionModal(); loadStock();
+                }).catch(() => { err.textContent = 'Network error.'; });
+            } else if (s.kind === 'move') {
+                const lines = Object.keys(s.cells).map(k => { const sk = splitKey(k), c = s.cells[k]; return { productId: sk.productId, colour: sk.colour, size: sk.size, packs: c.packs || 0 }; }).filter(l => l.packs > 0);
+                if (!lines.length) { err.textContent = 'Enter the packs to move.'; return; }
+                fetch('/api/supply/stock/transfer', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ lines }) }).then(r => r.json()).then(d => {
+                    if (!d.success) { err.textContent = d.message || 'Failed.'; return; }
+                    showToast(d.moved + ' packs moved to Spintex.'); closeStockActionModal(); loadStock();
+                }).catch(() => { err.textContent = 'Network error.'; });
+            } else {
+                const lines = Object.keys(s.cells).map(k => { const sk = splitKey(k), c = s.cells[k]; return { productId: sk.productId, colour: sk.colour, size: sk.size, counted: c.counted }; }).filter(l => l.counted != null);
+                if (!lines.length) { err.textContent = 'Enter at least one counted number.'; return; }
+                fetch('/api/supply/stock/count', { method: 'POST', headers: adminHeaders(), body: JSON.stringify({ pool: s.pool, lines, apply: true }) }).then(r => r.json()).then(d => {
+                    if (!d.success) { err.textContent = d.message || 'Failed.'; return; }
+                    showToast('Stock count applied.'); closeStockActionModal(); loadStock();
+                }).catch(() => { err.textContent = 'Network error.'; });
+            }
         }
 
         function renderStock() {
@@ -2983,7 +3069,7 @@
                       <img src="${escAdm(p.image || '')}" style="width:32px;height:32px;object-fit:cover;border-radius:6px;flex-shrink:0;background:#f3f4f6" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2232%22 height=%2232%22%3E%3Crect width=%2232%22 height=%2232%22 fill=%22%23f3f4f6%22/%3E%3Ctext x=%2250%25%22 y=%2255%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2214%22%3E%3C/text%3E%3C/svg%3E'"/>
                       <div>
                         <p class="text-sm font-semibold text-gray-800">${escAdm(p.name)}</p>
-                        ${poolProduct(p.id) ? `<p class="text-[10px] text-gray-400">Online ${poolProduct(p.id).totals.online} · Main ${poolProduct(p.id).totals.dome} · Supply ${poolProduct(p.id).totals.supply}</p>` : ''}
+                        ${poolProduct(p.id) ? `<p class="text-[10px] text-gray-400">Spintex ${poolProduct(p.id).totals.spintex} · Dome ${poolProduct(p.id).totals.dome}</p>` : ''}
                         ${hasVariants ? `<button onclick="toggleVariantRow('${escAdm(p.id)}')" class="text-[10px] text-orange-500 hover:underline font-semibold">Variants${variantCount ? ' (' + variantCount + ')' : ''}</button>` : ''}
                       </div>
                     </div>
@@ -2991,7 +3077,7 @@
                   <td class="py-3 px-4 text-xs text-gray-400">${escAdm(p.category || '—')}</td>
                   <td class="py-3 px-4 text-xs font-semibold text-gray-700 text-center">GH₵${parseFloat(p.price).toFixed(2)}</td>
                   <td class="py-3 px-4" style="width:180px">
-                    ${(() => { const locked = isPoolLocked(p.id) || !canEditStockHere(); const dis = locked ? 'disabled title="' + (canEditStockHere() ? 'Tracked by size — change it in Supply &gt; Stock' : 'View only') + '"' : ''; return `
+                    ${(() => { const locked = isPoolLocked(p.id) || !canEditStockHere(); const dis = locked ? 'disabled title="' + (canEditStockHere() ? 'Tracked by size — use Receive delivery / Move / Count above' : 'View only') + '"' : ''; return `
                     <div class="flex items-center gap-1.5">
                       <button ${dis} onclick="adjustStock('${escAdm(p.id)}', -1)" class="w-6 h-6 rounded-md bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600 text-sm font-bold flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed">−</button>
                       <input type="number" min="0" value="${isTracked ? stock : ''}" placeholder="—" ${dis}
@@ -4682,7 +4768,6 @@
                     v('set-about-body',     s.aboutBody);
                     v('set-footer-tagline', s.footerTagline);
                     v('set-trust-1', s.trustLine1);
-                    v('set-trust-2', s.trustLine2);
                     v('set-trust-3', s.trustLine3);
                     v('set-trust-4', s.trustLine4);
                     v('set-fd-threshold', s.freeDeliveryThreshold);
@@ -4747,7 +4832,6 @@
                 aboutBody:       document.getElementById('set-about-body')?.value || '',
                 footerTagline:   g('set-footer-tagline'),
                 trustLine1:      g('set-trust-1'),
-                trustLine2:      g('set-trust-2'),
                 trustLine3:      g('set-trust-3'),
                 trustLine4:      g('set-trust-4'),
                 freeDeliveryThreshold: parseFloat(g('set-fd-threshold')) || 200,
@@ -4843,29 +4927,8 @@
                 };
                 // Apply immediately if settings is already active
                 setTimeout(window._managerSettingsHide, 400);
-            } else if (role === 'staff') {
-                // Staff (handles WhatsApp orders) — Sales, plus a read-only Stock view so they can quote
-                // what's in stock; no Products/Categories editing and no Customers/Insights/Content/Settings.
-                ['customers', 'insights', 'content', 'settings'].forEach(hideGroup);
-                GROUPS.catalogue.tabs = ['stock']; // only Stock reachable — Products/Categories never render
-                const catBtn = document.getElementById('grp-catalogue');
-                if (catBtn) catBtn.textContent = 'Stock';
-                const panel = document.getElementById('admin-accounts-panel');
-                if (panel) panel.style.display = 'none';
-                // Hide all destructive actions (delete buttons), stock-editing controls and financial sub-tabs for staff
-                const styleEl = document.createElement('style');
-                styleEl.id = 'staff-role-css';
-                styleEl.textContent = `
-                    [onclick*="deleteProduct"],[onclick*="deleteOrder"],[onclick*="deleteReview"],
-                    [onclick*="deleteNotify"],[onclick*="deleteCode"],[onclick*="deleteCategory"],
-                    [onclick*="deleteFaq"],[onclick*="deleteBaseProduct"],[onclick*="deleteDelivery"],
-                    [onclick*="deleteStockIntake"],[onclick*="bulkDeleteOrders"],
-                    [onclick^="openIntakeModal"], #stab-costing, #stab-reports,
-                    #val-card-cost, #val-card-profit { display: none !important; }
-                `;
-                document.head.appendChild(styleEl);
-                // switchGroup('sales') is called by startAdminApp for staff
             }
+            // Staff never reach this function — they're redirected to /sales.html at login (see adminLogin/initAdminAuth).
         }
 
         function loadAdminAccounts() {

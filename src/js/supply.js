@@ -218,7 +218,8 @@
   A['draft-continue'] = function () { visit = lsGet(DRAFT_KEY, null); if (!visit) return; location.hash = '#/visit'; renderVisit(); };
   A['draft-discard'] = function () { clearDraft(); visit = null; V.home(); };
   A['retry-queue'] = function () { flushQueue().then(V.home); };
-  A['todo-visit'] = function (t) { if (!S.round) { toast('Load a round first.', true); location.hash = '#/round'; return; } visit = newVisit(); visit.shopId = t.dataset.id; visit.step = 2; location.hash = '#/visit'; renderVisit(); };
+  function fetchRecentShelf(shopId) { api('/api/supply/shops/' + shopId + '/recent-shelf').then(function (r) { if (visit) { visit.recentShelf = r; saveDraft(); renderShelfAlerts(); } }).catch(function () {}); }
+  A['todo-visit'] = function (t) { if (!S.round) { toast('Load a round first.', true); location.hash = '#/round'; return; } visit = newVisit(); visit.shopId = t.dataset.id; visit.step = 2; location.hash = '#/visit'; renderVisit(); fetchRecentShelf(t.dataset.id); };
   A.reload = boot;
   A['retry-route'] = function () { route(); };
   A['open-supply'] = function (t) { location.hash = '#/supply/' + t.dataset.id; };
@@ -226,7 +227,7 @@
 
   // ── ROUND ──────────────────────────────────────────────────────────────────
   var pendingLoader = false;
-  function loadStockInfo() { if (S.stockChecked) return; S.stockChecked = true; api('/api/supply/stock').then(function (o) { S.stockInfo = o; if (loader && o.tracking && !Object.keys(loader.qty).length) renderLoader(); }).catch(function () {}); }
+  function loadStockInfo() { if (S.stockChecked) return; S.stockChecked = true; api('/api/supply/stock').then(function (o) { S.stockInfo = o; if (loader && o.tracking && !Object.keys(loader.qty).length) renderLoader(); if (visit && visit.step === 2) renderShelfAlerts(); }).catch(function () {}); }
   function openLoader(qty) { loader = { qty: qty || {}, q: '', mode: S.round ? 'add' : 'create' }; pendingLoader = true; if ((location.hash || '') === '#/round') route(); else location.hash = '#/round'; }
   V.round = function () {
     var r = S.round;
@@ -379,6 +380,36 @@
     return '<div class="card notice ' + (shop.overdue > 0.005 || (shop.creditLimit != null && shop.balance > shop.creditLimit) ? 'warn' : '') + '"><b>' + esc(shop.name) + '</b> ' + esc(bits.join(' · ')) + '.</div>';
   }
 
+  // ── shelf-check alerts: flags only, staff decides whether to swap — never automatic ─────────
+  function shelfAlerts() {
+    if (!visit || !S.round) return [];
+    var out = [], recent = visit.recentShelf || [];
+    var find = function (rec, pid, c, s) { return (rec.shelf || []).filter(function (x) { return x.productId === pid && (x.colour || '') === (c || '') && (x.size || '') === (s || ''); })[0]; };
+    roundLines().forEach(function (l) {
+      var k = key(l.productId, l.colour, l.size), has = visit.shelf[k];
+      if (!(has > 0)) return; // shop reports having none of it — nothing to flag
+      var label = l.productName + ' ' + skuLabel(l);
+      if (S.stockInfo && S.stockInfo.tracking) {
+        var sp = S.stockInfo.products.filter(function (p) { return p.id === l.productId; })[0];
+        var r = sp && sp.skus[(l.colour || '') + '|' + (l.size || '')];
+        if (r && r.spintex === 0) out.push({ k: k, label: label, text: 'We have none of this in Spintex right now.' });
+      }
+      if (recent.length >= 2) {
+        var newer = find(recent[0], l.productId, l.colour, l.size), older = find(recent[1], l.productId, l.colour, l.size);
+        if (newer && older && newer.has > 0 && newer.has >= older.has) out.push({ k: k, label: label, text: 'Not moving here — ' + older.has + ' then ' + newer.has + ' packs on the last two visits.' });
+      }
+    });
+    return out;
+  }
+  function renderShelfAlerts() {
+    var el = $('#shelf-alerts'); if (!el) return;
+    var alerts = shelfAlerts();
+    el.innerHTML = alerts.length ? '<div class="card notice warn"><b>Worth a look</b>' + alerts.map(function (a) {
+      return '<div class="line"><div><div class="t">' + esc(a.label) + '</div><div class="m">' + esc(a.text) + '</div></div><button class="btn small" data-act="alert-swap" data-k="' + esc(a.k) + '">Swap this</button></div>';
+    }).join('') + '</div>' : '';
+  }
+  A['alert-swap'] = function (t) { var k = t.dataset.k; visit.takeBack[k] = visit.takeBack[k] || visit.shelf[k] || 1; saveDraft(); visit.step = 25; renderVisit(); };
+
   function renderVisit() {
     if (!S.round) { app.innerHTML = '<div class="card center"><h2>No round open</h2><p class="sub">Load the stock you are taking out first.</p><a class="btn gold" href="#/round">Load a round</a></div>'; return; }
     if (!visit) visit = newVisit();
@@ -411,7 +442,10 @@
       var tbPacks = Object.keys(v.takeBack).reduce(function (a, k) { return a + (v.takeBack[k] || 0); }, 0);
       app.innerHTML = stepsBar(2) + pageHead('What do they have?', esc(shop.name) + ' — enter the packs already on their shelf. Leave blank for none.', '<button class="btn small" data-act="visit-back">Change shop</button>') + shopWarning(shop) +
         (cards || '<p class="empty">Nothing left on your round.</p>') +
+        '<div id="shelf-alerts"></div>' +
         '<div class="actions"><button class="btn" data-act="visit-takeback">' + (tbPacks ? 'Taking back ' + packs(tbPacks) + ' — edit' : 'Swap: take items back') + '</button><button class="btn primary" data-act="visit-to-give">See what to give</button></div>';
+      loadStockInfo();
+      renderShelfAlerts();
       return;
     }
     if (v.step === 25) {
@@ -529,7 +563,7 @@
       } else { btn.disabled = false; toast(e.message, true); }
     });
   }
-  A['pick-shop'] = function (t) { visit.shopId = t.dataset.id; visit.step = 2; saveDraft(); renderVisit(); };
+  A['pick-shop'] = function (t) { visit.shopId = t.dataset.id; visit.step = 2; saveDraft(); renderVisit(); fetchRecentShelf(t.dataset.id); };
   A['shop-new-visit'] = function () { C.shopDialog(null, function (shop) { visit.shopId = shop.id; visit.step = 2; saveDraft(); renderVisit(); }); };
   A['visit-back'] = function () { visit.step = 1; renderVisit(); };
   A['visit-takeback'] = function () { visit.step = 25; renderVisit(); };
@@ -548,7 +582,7 @@
     var input = t.closest('.stepper').querySelector('input'), max = parseInt(input.dataset.max, 10), val = clamp(parseInt(input.value, 10) + (t.dataset.act === 'give-plus' ? 1 : -1), max);
     input.value = val; visit.give[t.dataset.k] = val; visit.touched[t.dataset.k] = true; refreshGiveBar(); saveDraft();
   };
-  I.shelf = function (t) { var v2 = t.value === '' ? null : clamp(t.value); if (v2 == null) delete visit.shelf[t.dataset.k]; else visit.shelf[t.dataset.k] = v2; saveDraft(); };
+  I.shelf = function (t) { var v2 = t.value === '' ? null : clamp(t.value); if (v2 == null) delete visit.shelf[t.dataset.k]; else visit.shelf[t.dataset.k] = v2; saveDraft(); renderShelfAlerts(); };
   I.takeback = function (t) {
     var n = clamp(t.value); if (n > 0) visit.takeBack[t.dataset.k] = n; else delete visit.takeBack[t.dataset.k];
     var pn = 0; Object.keys(visit.takeBack).forEach(function (kk) { if (kk.indexOf(t.dataset.p + '|') === 0) pn += visit.takeBack[kk]; });

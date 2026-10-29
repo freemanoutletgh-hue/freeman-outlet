@@ -28,79 +28,113 @@ const r2 = n => Math.round(n * 100) / 100;
     { productId: 'p-panty', colour: 'Black', size: '8', received: 12 }, { productId: 'p-panty', colour: 'Black', size: '10', received: 12 },
     { productId: 'p-evil', colour: 'Red "Hot" <b>', size: 'S', received: 5 },
   ] }); ok(r.body.success, 'big intake', r.body);
-  const moveAll = async (to, frac) => { const o = await ST(); const lines = []; o.products.forEach(p => Object.keys(p.skus).forEach(k => { const [c, s] = k.split('|'); const n = Math.floor(p.skus[k].dome * frac); if (n > 0) lines.push({ productId: p.id, colour: c, size: s, packs: n }); })); return call('POST', '/api/supply/stock/transfer', owner, { from: 'dome', to, lines }); };
-  r = await moveAll('online', 0.5); ok(r.body.success, 'move half to online', r.body);
-  r = await moveAll('supply', 0.5); ok(r.body.success, 'move half of the rest to supply', r.body);
+  const moveAll = async (frac) => { const o = await ST(); const lines = []; o.products.forEach(p => Object.keys(p.skus).forEach(k => { const [c, s] = k.split('|'); const n = Math.floor(p.skus[k].dome * frac); if (n > 0) lines.push({ productId: p.id, colour: c, size: s, packs: n }); })); return call('POST', '/api/supply/stock/transfer', owner, { lines }); };
+  r = await moveAll(0.5); ok(r.body.success, 'move half of dome to spintex', r.body);
   let o = await ST(); const tot0 = { ...o.totals };
   console.log('pools after setup', JSON.stringify(tot0));
 
-  // ── 2. switch tracking on: website numbers must equal the Online pool exactly ──
+  // ── 2. switch tracking on: website numbers must equal the Spintex pool exactly ──
   r = await call('PUT', '/api/supply/stock/tracking', owner, { on: true, confirm: true }); ok(r.body.success, 'tracking on', r.body);
+  // Public stock is Dome + Spintex combined, since a sale can draw from either (see stock.js sell()).
   const checkSync = async (label) => {
     const [prods, st] = [await P(), await ST()];
     for (const sp of st.products) {
       const pub = prods.find(x => x.id === sp.id); if (!pub) continue;
-      const onlineTotal = sp.totals.online; const anyTracked = Object.values(sp.skus).some(x => x.dome + x.online + x.supply > 0);
+      const combinedTotal = sp.totals.dome + sp.totals.spintex; const anyTracked = Object.values(sp.skus).some(x => x.dome + x.spintex > 0);
       if (!anyTracked) continue;
-      ok(pub.stock === onlineTotal, `${label}: ${sp.id} public stock ${pub.stock} = online pool ${onlineTotal}`);
-      ok(pub.isSoldOut === (onlineTotal === 0), `${label}: ${sp.id} soldOut flag matches`, [pub.isSoldOut, onlineTotal]);
-      if (Array.isArray(pub.variants) && typeof pub.variants[0] === 'object') pub.variants.forEach(v => { const sum = Object.keys(sp.skus).filter(k => k.split('|')[0] === v.color).reduce((a, k) => a + sp.skus[k].online, 0); ok(v.stock === sum, `${label}: ${sp.id}/${v.color} variant stock ${v.stock} = ${sum}`); });
+      ok(pub.stock === combinedTotal, `${label}: ${sp.id} public stock ${pub.stock} = combined pool ${combinedTotal}`);
+      ok(pub.isSoldOut === (combinedTotal === 0), `${label}: ${sp.id} soldOut flag matches`, [pub.isSoldOut, combinedTotal]);
+      if (Array.isArray(pub.variants) && typeof pub.variants[0] === 'object') pub.variants.forEach(v => { const sum = Object.keys(sp.skus).filter(k => k.split('|')[0] === v.color).reduce((a, k) => a + sp.skus[k].dome + sp.skus[k].spintex, 0); ok(v.stock === sum, `${label}: ${sp.id}/${v.color} variant stock ${v.stock} = ${sum}`); });
     }
   };
   await checkSync('after tracking on');
 
   // ── 3. website orders for every product shape ─────────────────────────────
   const order = (items, fresh = true) => call('POST', '/api/whatsapp-order', null, { customer: { name: 'Kofi <b>T</b>', phone: '0241111111' }, cartItems: items, deliveryZone: 'Accra', deliveryAddress: 'East Legon' }, fresh);
-  const onlineOf = async (pid, c, s) => { const p = (await ST()).products.find(x => x.id === pid); return p.skus[c + '|' + s].online; };
-  let before = await onlineOf('p-rich', 'White', 'M');
+  const spintexOf = async (pid, c, s) => { const p = (await ST()).products.find(x => x.id === pid); return p.skus[c + '|' + s].spintex; };
+  // Ship a placed order (the status PATCH that actually moves stock now — see Phase 3: deduction is
+  // deferred from checkout to the moment staff confirms Shipped/Delivered and picks a pool).
+  const ship = (orderId, pool = 'spintex') => call('PATCH', '/api/orders/' + orderId + '/status', owner, { status: 'Shipped', pool });
+  let before = await spintexOf('p-rich', 'White', 'M');
   r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: 2, color: 'White', size: 'M' }]); ok(r.body.success && r.body.order.status !== 'Needs Review', 'order rich M', r.body);
-  ok((await onlineOf('p-rich', 'White', 'M')) === before - 2, 'rich M online −2');
+  ok(r.body.order.stockDeducted === false, 'order rich M not deducted at checkout (deferred)', r.body.order.stockDeducted);
+  ok((await spintexOf('p-rich', 'White', 'M')) === before, 'rich M spintex unchanged at checkout time');
   const ord1 = r.body.order;
+  r = await ship(ord1.id); ok(r.body.success, 'ship rich M order', r.body);
+  ok((await spintexOf('p-rich', 'White', 'M')) === before - 2, 'rich M spintex −2 once shipped');
   await checkSync('after order');
   r = await order([{ id: 'p-socks', name: 'x', price: 260, quantity: 3, color: '', size: '' }]); ok(r.body.success && r.body.order.status !== 'Needs Review', 'order one-size socks', r.body);
-  ok((await onlineOf('p-socks', '', '')) === 15 - 3, 'socks online −3', await onlineOf('p-socks', '', ''));
+  const sockOrd = r.body.order;
+  r = await ship(sockOrd.id); ok(r.body.success, 'ship socks order', r.body);
+  ok((await spintexOf('p-socks', '', '')) === 15 - 3, 'socks spintex −3 once shipped', await spintexOf('p-socks', '', ''));
   r = await order([{ id: 'p-panty', name: 'x', price: 260, quantity: 1, color: 'Black', size: '10' }]); ok(r.body.success, 'order panty numeric size', r.body);
   r = await order([{ id: 'p-plain', name: 'x', price: 260, quantity: 1, color: 'white', size: 'M' }]); ok(r.body.success, 'order plain-variant product', r.body);
   r = await order([{ id: 'p-evil', name: 'x', price: 260, quantity: 1, color: 'Red "Hot" <b>', size: 'S' }]); ok(r.body.success, 'order hostile-name product', r.body);
-  // sold-out size and oversell are flagged, never silently deducted
-  const b2 = await onlineOf('p-rich', 'White', 'XL'); // 0 online (1 received, half floors to 0)
-  r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: 1, color: 'White', size: 'XL' }]); ok(r.body.success === false || r.body.order.status === 'Needs Review', 'sold-out size flagged/rejected', r.body.order && r.body.order.status);
-  ok((await onlineOf('p-rich', 'White', 'XL')) === b2, 'sold-out size not deducted');
-  const m0 = await onlineOf('p-rich', 'White', 'L');
-  r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: m0 + 5, color: 'White', size: 'L' }]); ok(r.body.success === false || r.body.order.status === 'Needs Review', 'oversell flagged/rejected', r.body.order && r.body.order.status);
-  ok((await onlineOf('p-rich', 'White', 'L')) === m0, 'oversell not deducted');
+  // sold-out (zero in BOTH pools) and oversell (more than combined) are flagged, never silently deducted
+  const combinedOf = async (pid, c, s) => { const p = (await ST()).products.find(x => x.id === pid); const sk = p.skus[c + '|' + s]; return sk.dome + sk.spintex; };
+  const b2 = await combinedOf('p-plain', 'grey', 'L'); // never stocked — genuinely 0 in both pools
+  r = await order([{ id: 'p-plain', name: 'x', price: 260, quantity: 1, color: 'grey', size: 'L' }]); ok(r.body.success === false || r.body.order.status === 'Needs Review', 'sold-out size flagged/rejected', r.body.order && r.body.order.status);
+  ok((await combinedOf('p-plain', 'grey', 'L')) === b2, 'sold-out size not deducted');
+  const combinedL = await combinedOf('p-rich', 'White', 'L');
+  r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: combinedL + 5, color: 'White', size: 'L' }]); ok(r.body.success === false || r.body.order.status === 'Needs Review', 'oversell flagged/rejected (more than Dome + Spintex combined)', r.body.order && r.body.order.status);
+  ok((await combinedOf('p-rich', 'White', 'L')) === combinedL, 'oversell not deducted');
   // a size that the product does not have
   r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: 1, color: 'Black', size: 'XL' }]); ok(r.body.success === false || r.body.order.status === 'Needs Review', 'non-existent size for colour flagged/rejected', r.body.order && r.body.order.status);
   // negative / zero / fractional quantities
   for (const q of [0, -3, 1.5, 'abc', null]) { const before2 = JSON.stringify((await ST()).totals); r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: q, color: 'White', size: 'M' }]); const after2 = JSON.stringify((await ST()).totals); ok(before2 === after2 || (q === 1.5 || q === 'abc'), 'odd quantity ' + q + ' does not corrupt pools', [before2, after2, r.body.message]); }
   // return restores the exact SKU
-  const ordId = ord1.id; before = await onlineOf('p-rich', 'White', 'M');
+  const ordId = ord1.id; before = await spintexOf('p-rich', 'White', 'M');
   r = await call('PATCH', '/api/orders/' + ordId + '/return', owner, { status: 'Returned', returnReason: 'debug' }); ok(r.body.success, 'return order', r.body);
-  ok((await onlineOf('p-rich', 'White', 'M')) === before + 2, 'return restores +2 to the same SKU');
+  ok((await spintexOf('p-rich', 'White', 'M')) === before + 2, 'return restores +2 to the same SKU');
   r = await call('PATCH', '/api/orders/' + ordId + '/return', owner, { status: 'Refunded', returnReason: 'again' });
-  ok((await onlineOf('p-rich', 'White', 'M')) === before + 2, 'second return call does not double-restore');
+  ok((await spintexOf('p-rich', 'White', 'M')) === before + 2, 'second return call does not double-restore');
   await checkSync('after return');
-  // delete an order restores too
-  r = await order([{ id: 'p-socks', name: 'x', price: 260, quantity: 2, color: '', size: '' }]); const delOrder = r.body.order; before = await onlineOf('p-socks', '', '');
+  // delete an order restores too (ship it first — a never-shipped order has nothing deducted to restore)
+  r = await order([{ id: 'p-socks', name: 'x', price: 260, quantity: 2, color: '', size: '' }]); const delOrder = r.body.order;
+  r = await ship(delOrder.id); ok(r.body.success, 'ship order before delete test', r.body);
+  before = await spintexOf('p-socks', '', '');
   r = await call('DELETE', '/api/orders/' + delOrder.id, owner); ok(r.body.success, 'delete order', r.body);
-  ok((await onlineOf('p-socks', '', '')) === before + 2, 'delete restores stock');
+  ok((await spintexOf('p-socks', '', '')) === before + 2, 'delete restores stock');
   // manual invoice (admin) with and without size
-  before = await onlineOf('p-rich', 'Black', 'M');
+  before = await spintexOf('p-rich', 'Black', 'M');
   r = await call('POST', '/api/admin/manual-invoice', owner, { customer: { name: 'Walk in', phone: '0200000000' }, items: [{ id: 'p-rich', name: 'x', price: 250, quantity: 1, color: 'Black', size: 'M' }] });
   console.log('manual invoice endpoint ->', r.status, JSON.stringify(r.body).slice(0, 160));
 
-  // ── 4. concurrency: 25 simultaneous orders for the last 3 packs ──────────
-  await call('POST', '/api/supply/stock/count', owner, { pool: 'online', apply: true, lines: [{ productId: 'p-socks', colour: '', size: '', counted: 3 }] });
+  // ── 4. concurrency: deduction is deferred, so checkout no longer reserves stock — the
+  // real race is 25 simultaneous *confirmations* (Shipped) for the last 3 packs ──────────
+  // Zero BOTH pools for this SKU first, since a sale now falls back to Dome too — the true cap is the combined total.
+  await call('POST', '/api/supply/stock/count', owner, { pool: 'dome', apply: true, lines: [{ productId: 'p-socks', colour: '', size: '', counted: 0 }] });
+  await call('POST', '/api/supply/stock/count', owner, { pool: 'spintex', apply: true, lines: [{ productId: 'p-socks', colour: '', size: '', counted: 3 }] });
+  const beforeConc = await spintexOf('p-socks', '', '');
   const results = await Promise.all(Array.from({ length: 25 }, () => order([{ id: 'p-socks', name: 'x', price: 260, quantity: 1, color: '', size: '' }])));
-  const good = results.filter(x => x.body.success && x.body.order.status !== 'Needs Review').length;
-  const left = await onlineOf('p-socks', '', '');
-  console.log('concurrent orders accepted:', good, 'pool left:', left);
-  ok(left >= 0 && good <= 3 && left === 3 - good, 'concurrent orders never oversell', { good, left });
+  const placed = results.filter(x => x.body.success && x.body.order.status !== 'Needs Review');
+  ok(placed.length === 25, 'checkout no longer reserves stock — all 25 orders are accepted', placed.length);
+  ok((await spintexOf('p-socks', '', '')) === beforeConc, 'placing orders does not touch stock', await spintexOf('p-socks', '', ''));
+  const shipResults = await Promise.all(placed.map(x => ship(x.body.order.id)));
+  const shipOk = shipResults.filter(x => x.body.success).length;
+  const left = await spintexOf('p-socks', '', '');
+  console.log('confirmed shipped:', shipOk, 'pool left:', left);
+  ok(shipOk === 25, 'all 25 confirmations succeed — oversell is clamped, not rejected', shipOk);
+  ok(left === 0, 'spintex never goes negative — clamped at 0 once the 3 packs are spent', left);
+  const movementsNow = (await call('GET', '/api/supply/stock/movements?limit=200', owner)).body;
+  const shorts = movementsNow.filter(m => m.type === 'spintex-short' && m.productId === 'p-socks');
+  ok(shorts.length >= 1, 'shortfall beyond the 3 packs is logged as spintex-short, not silently dropped', shorts.length);
   await checkSync('after concurrency');
+
+  // ── 4b. Sales and Supply share one pool — a round-load competes with a sale ──
+  await call('POST', '/api/supply/stock/intake', owner, { lines: [{ productId: 'p-panty', colour: 'Black', size: '12', received: 5 }] });
+  await call('POST', '/api/supply/stock/transfer', owner, { lines: [{ productId: 'p-panty', colour: 'Black', size: '12', packs: 5 }] });
+  const sBefore = await spintexOf('p-panty', 'Black', '12');
+  const rndShared = await call('POST', '/api/supply/rounds', owner, { lines: [{ productId: 'p-panty', colour: 'Black', size: '12', packs: sBefore - 1 }] });
+  ok(rndShared.body.success, 'load a round, taking all but 1 pack from the shared pool', rndShared.body);
+  ok((await spintexOf('p-panty', 'Black', '12')) === 1, 'spintex now has only 1 left (round took the rest)', await spintexOf('p-panty', 'Black', '12'));
+  r = await order([{ id: 'p-panty', name: 'x', price: 260, quantity: 2, color: 'Black', size: '12' }]);
+  ok(r.body.success === false || r.body.order.status === 'Needs Review', 'a sale cannot oversell what the round already took', r.body.order && r.body.order.status);
+  await call('POST', '/api/supply/rounds/' + rndShared.body.round.id + '/close', owner, { returned: [{ productId: 'p-panty', colour: 'Black', size: '12', packs: sBefore - 1 }] });
 
   // ── 5. money lifecycle with an independent ledger ────────────────────────
   await call('POST', '/api/supply/stock/intake', owner, { lines: [{ productId: 'p-socks', colour: '', size: '', received: 10 }, { productId: 'p-rich', colour: 'White', size: 'M', received: 10 }] });
-  await call('POST', '/api/supply/stock/transfer', owner, { from: 'dome', to: 'supply', lines: [{ productId: 'p-socks', colour: '', size: '', packs: 10 }, { productId: 'p-rich', colour: 'White', size: 'M', packs: 10 }] });
+  await call('POST', '/api/supply/stock/transfer', owner, { lines: [{ productId: 'p-socks', colour: '', size: '', packs: 10 }, { productId: 'p-rich', colour: 'White', size: 'M', packs: 10 }] });
   const rnd = await call('POST', '/api/supply/rounds', owner, { lines: [{ productId: 'p-rich', colour: 'White', size: 'M', packs: 8 }, { productId: 'p-socks', colour: '', size: '', packs: 1 }] }); ok(rnd.body.success, 'round for money tests', rnd.body);
   console.log('round create ->', rnd.status, JSON.stringify(rnd.body).slice(0,300)); const round = rnd.body.round;
   const mk = (shop, no, date, packs) => call('POST', '/api/supply/supplies', owner, { shopId: shop.id, invoiceNo: no, date, roundId: round.id, lines: [{ productId: 'p-rich', colour: 'White', size: 'M', packs, unitPrice: 250.2 }] });
@@ -147,7 +181,7 @@ const r2 = n => Math.round(n * 100) / 100;
   // ── 6. stock invariants: pools equal the sum of logged movements ──────────
   o = await ST(); const mv = (await call('GET', '/api/supply/stock/movements?limit=500', owner)).body;
   const calc = {}; mv.forEach(m => { const k = m.key + '#' + m.pool; calc[k] = (calc[k] || 0) + m.delta; });
-  let bad = 0, neg = 0; o.products.forEach(p => Object.keys(p.skus).forEach(k => ['dome', 'online', 'supply'].forEach(pl => { const v = p.skus[k][pl]; if (v < 0) neg++; const ck = p.id + '|' + k + '#' + pl; if ((calc[ck] || 0) !== v) { bad++; if (bad < 6) console.log('  ledger mismatch', ck, 'pool', v, 'log', calc[ck] || 0); } })));
+  let bad = 0, neg = 0; o.products.forEach(p => Object.keys(p.skus).forEach(k => ['dome', 'spintex'].forEach(pl => { const v = p.skus[k][pl]; if (v < 0) neg++; const ck = p.id + '|' + k + '#' + pl; if ((calc[ck] || 0) !== v) { bad++; if (bad < 6) console.log('  ledger mismatch', ck, 'pool', v, 'log', calc[ck] || 0); } })));
   ok(neg === 0, 'no negative pools'); ok(bad === 0, 'pools equal the sum of logged movements', bad);
   console.log('movement log rows:', mv.length, '(capped at 500 per query)');
 

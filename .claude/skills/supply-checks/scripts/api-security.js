@@ -75,16 +75,16 @@ async function call(method, url, token, body, raw) {
     ['POST', '/api/supply/stock/intake', { lines: [{ productId: 'p-rich', colour: 'Green', size: 'M', received: 1 }] }],
     ['POST', '/api/supply/stock/intake', { lines: [{ productId: 'zzz', colour: '', size: '', received: 1 }] }],
     ['POST', '/api/supply/stock/intake', { lines: 'x' }], ['POST', '/api/supply/stock/intake', 'null'], ['POST', '/api/supply/stock/intake', { date: 'x', lines: [] }],
-    ['POST', '/api/supply/stock/transfer', { from: 'dome', to: 'dome', lines: [{ productId: 'p-rich', colour: 'White', size: 'M', packs: 1 }] }],
-    ['POST', '/api/supply/stock/transfer', { from: 'x', to: 'online', lines: [] }],
-    ['POST', '/api/supply/stock/transfer', { from: 'dome', to: 'online', lines: [{ productId: 'p-rich', colour: 'White', size: 'M', packs: 5 }] }],
+    ['POST', '/api/supply/stock/transfer', { lines: [] }],
+    ['POST', '/api/supply/stock/transfer', { lines: 'x' }],
+    ['POST', '/api/supply/stock/transfer', { lines: [{ productId: 'p-rich', colour: 'White', size: 'M', packs: 5 }] }], // Dome has 0, over-transfer rejected
     ['POST', '/api/supply/stock/count', { pool: 'dome', lines: [{ productId: 'p-rich', colour: 'White', size: 'M', counted: -2 }] }],
     ['POST', '/api/supply/stock/count', { pool: 'nope', lines: [] }],
     ['PUT', '/api/supply/stock/sizes', { productIds: [], sizes: ['X'] }], ['PUT', '/api/supply/stock/sizes', { productIds: ['p-rich'], mode: 'set', sizes: [] }],
     ['PUT', '/api/supply/stock/size-guides/nope', { columns: ['a', 'b'], rows: [['1', '2']] }], ['PUT', '/api/supply/stock/size-guides/socks', { columns: ['a'], rows: [['1']] }], ['PUT', '/api/supply/stock/size-guides/socks', { columns: ['a', 'b'], rows: [] }],
   ];
   for (const [m, u, b] of stockBad) { r = await call(m, u, owner, b); ok(r.status >= 400 && r.status < 500, `stock bad ${m} ${u} ${JSON.stringify(b).slice(0, 70)} → 4xx`, [r.status, r.body.message]); }
-  let ov = (await call('GET', '/api/supply/stock', owner)).body; ok(ov.totals.dome === 0 && ov.totals.online === 0 && ov.totals.supply === 0, 'no stock created by bad requests', ov.totals);
+  let ov = (await call('GET', '/api/supply/stock', owner)).body; ok(ov.totals.dome === 0 && ov.totals.spintex === 0, 'no stock created by bad requests', ov.totals);
 
   // ── F. delimiter in a colour name ─────────────────────────────────────────
   r = await call('POST', '/api/supply/stock/intake', owner, { lines: [{ productId: 'p-pipe', colour: 'a|b', size: 'M', received: 5 }] });

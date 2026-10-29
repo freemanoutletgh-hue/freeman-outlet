@@ -108,6 +108,18 @@ function vatBreakdown(total) {
     return { inclusiveTotal: t, base, parts, totalRate: VAT_TOTAL_RATE };
 }
 
+// Recomputes an order's subtotal/total/vat from its current item list — used by the Sales
+// Add item / Change item actions. Delivery fee, bundle discount and promo discount were all
+// locked in at order time and are left as-is; only the item lines can change after that.
+function recalcOrderTotal(order) {
+    const subtotal = (order.items || []).reduce((s, i) => s + (parseFloat(i.price) || 0) * (parseInt(i.quantity, 10) || 1), 0);
+    const afterBundle = Math.max(0, subtotal - (parseFloat(order.bundleDiscount) || 0));
+    const afterPromo  = Math.max(0, afterBundle - (parseFloat(order.promoDiscount) || 0));
+    order.subtotal = subtotal;
+    order.total = Math.max(0, afterPromo + (parseFloat(order.deliveryPrice) || 0));
+    order.vat = vatBreakdown(order.total);
+}
+
 // ── BUNDLE PRICING ───────────────────────────────────────────────────────────
 // A product can carry bundle offers ("3 pieces for GH₵690"). They are read
 // through productBundles() only, so an offer that stops being a genuine saving
@@ -207,8 +219,8 @@ function saveJSON(file, data) {
 }
 
 let stockMod = null; // size-level stock (stock.js); null until registered at the bottom of this file
-function deductStock(cartItems) {
-    if (stockMod) cartItems = stockMod.online(cartItems, -1, 'Website order');
+function deductStock(cartItems, pool) {
+    if (stockMod) cartItems = stockMod.sell(cartItems, -1, 'Sale', null, pool);
     let changed = false;
     const thresh = settings.stockAlertThreshold || 3;
     (cartItems || []).forEach(item => {
@@ -251,8 +263,8 @@ function deductStock(cartItems) {
 // though the goods physically came back (or the sale never happened, for a
 // deleted order). `reason`/`ref` identify which order caused the restoration
 // in the stock-movement ledger.
-function restoreStock(items, reason, ref) {
-    if (stockMod) items = stockMod.online(items, 1, reason, ref);
+function restoreStock(items, reason, ref, pool) {
+    if (stockMod) items = stockMod.sell(items, 1, reason, ref, pool);
     let changed = false;
     (items || []).forEach(item => {
         const p = products.find(p => p.id === item.id);
@@ -442,7 +454,8 @@ const SETTINGS_DEFAULTS = {
     aboutBody:        'Freeman Outlet is a Ghanaian-based outlet store bringing genuine undershirts, boxers, socks and ladies\' panties from brands like Fruit of the Loom, Jockey, Pier One, George and Charnos to your doorstep at honest, outlet prices.\n\nEvery item we sell is 100% authentic — no fakes, no knock-offs. We buy in bulk so we can pass the savings straight to you, without cutting corners on quality.\n\nWhether you\'re restocking your everyday essentials or shopping for the family, we\'ve got sizes and packs to match — delivered fresh, anywhere in Ghana.',
     footerTagline:    'Everyday Basics. Built To Last. Outlet Prices.',
     trustLine1:       '<strong>Nationwide delivery</strong> across Ghana',
-    trustLine2:       'Free delivery in <strong>Accra</strong> on orders over <strong>GH₵200</strong>',
+    // trustLine2 (free delivery) is not a setting — it's computed on the storefront from
+    // freeDeliveryThreshold/freeDeliveryZone below, so it can never go stale against them.
     trustLine3:       '<strong>Order easily</strong> via WhatsApp',
     trustLine4:       '<strong>Fast replies</strong> on WhatsApp',
     freeDeliveryThreshold: 200,
@@ -580,6 +593,8 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'in
 // admin.html is now public — login form inside handles auth
 app.get('/admin.html', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'admin.html')));
 app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'admin.html')));
+// Sales — owner/manager/staff order-taking tool, split out of Admin (see src/js/sales.js). Public like admin.html; the login form inside handles auth.
+app.get(['/sales', '/sales.html'], (req, res) => res.sendFile(path.join(__dirname, 'src', 'pages', 'sales.html')));
 app.get('/track', (req, res) => res.sendFile(path.join(__dirname, 'public', 'track.html')));
 
 // public/index.html is a stale duplicate of src/pages/index.html (the real homepage, served at '/').
@@ -1015,7 +1030,7 @@ app.patch('/api/products/:id/listed', requireAdminJWT, requireManagerOrOwner, (r
 app.patch('/api/products/:id/stock', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const prod = products.find(p => p.id === req.params.id);
     if (!prod) return res.status(404).json({ success: false, message: 'Product not found.' });
-    if (stockMod && stockMod.isLocked(prod.id)) return res.status(409).json({ success: false, message: 'Stock for this product is tracked by size. Change it in Supply > Stock (Receive delivery, Move stock or Count stock).' });
+    if (stockMod && stockMod.isLocked(prod.id)) return res.status(409).json({ success: false, message: 'Stock for this product is tracked by size. Use Receive delivery / Move / Count in Admin > Stock.' });
     const { stock, isSoldOut, reason } = req.body;
     const prevStock = prod.stock;
     if (stock !== undefined) prod.stock = stock === null || stock === '' ? null : parseInt(stock);
@@ -1038,7 +1053,7 @@ function validateCartStock(cartItems) {
         if (!p) continue;
         if (p.isListed === false) return `"${p.name}" is no longer available.`;
         const qty = parseInt(i.quantity, 10) || 1;
-        const sizeStockError = stockMod && stockMod.validateOnline(i);
+        const sizeStockError = stockMod && stockMod.validateSale(i);
         if (sizeStockError) return sizeStockError;
         const isRichVariant = Array.isArray(p.variants) && p.variants.length && typeof p.variants[0] === 'object';
         if (isRichVariant) {
@@ -1186,15 +1201,17 @@ app.post('/api/admin/manual-invoice', requireAdminJWT, async (req, res) => {
         return res.status(409).json({ success: false, message: `Invoice ${id} already exists.` });
     order.id = id;
 
-    // Validate stock for linked product items
+    // Validate stock for linked product items (soft check against the combined Dome+Spintex
+    // total — which pool it actually comes from isn't decided until Sales confirms the order)
     const stockError = validateCartStock(
         orderItems.filter(i => i.id).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: i.quantity }))
     );
     if (stockError) return res.status(400).json({ success: false, message: stockError });
 
-    // Deduct stock BEFORE saving the order so the flag is only set if deduction succeeds
-    deductStock(orderItems.filter(i => i.id).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: i.quantity })));
-    order.stockDeducted = true;
+    // Stock is no longer deducted at checkout/save time — it moves only when staff confirms
+    // the order in Sales (marking it Shipped/Delivered) and picks Dome or Spintex. See the
+    // PATCH /api/orders/:id/status and /bulk-status handlers below.
+    order.stockDeducted = false;
     orders.push(order);
     saveJSON(ORDERS_FILE, orders);
 
@@ -1310,12 +1327,15 @@ app.post('/api/whatsapp-order', (req, res) => {
         total: serverTotal,
         vat: vatBreakdown(serverTotal),
         paidAt: new Date().toISOString(),
-        stockDeducted: !fulfillmentAlert,
+        // Stock is no longer deducted at checkout — it moves only when staff confirms the
+        // order in Sales (marking it Shipped/Delivered) and picks Dome or Spintex. fulfillmentAlert
+        // is still a useful early warning (checked against the combined Dome+Spintex total) even
+        // though nothing is deducted yet — it tells staff this order may not be fulfillable as-is.
+        stockDeducted: false,
         ...(fulfillmentAlert ? { fulfillmentAlert, status: 'Needs Review' } : {})
     };
     orders.push(order);
     saveJSON(ORDERS_FILE, orders);
-    if (!fulfillmentAlert) deductStock(cartItems);
     if (appliedPromoCode) {
         // Usage count is no longer stored/incremented here — promoUsageCount()
         // derives it live from orders, so it can never drift from what actually
@@ -2138,20 +2158,100 @@ app.patch('/api/orders/:id/note', requireAdminJWT, (req, res) => {
     res.json({ success: true, order });
 });
 
+// ── ORDER ITEM EDITS (Sales: customer wants to add to or change an order already taken) ────
+// Two distinct, separately logged actions rather than one generic "edit items" — so the
+// order history reads like what actually happened on the call, not a diff. Edits made before
+// the order is Shipped/Delivered don't touch stock (nothing has been deducted yet — the final
+// item list is what gets deducted when Sales confirms it, per the deferred-deduction model).
+// An edit made AFTER that point adjusts the already-deducted pool directly, right here.
+function logItemEdit(order, entry) {
+    if (!order.itemEdits) order.itemEdits = [];
+    order.itemEdits.push(Object.assign({ timestamp: Date.now(), editedBy: entry.editedBy }, entry));
+}
+function buildOrderLineItem(body) {
+    const { productId, name, price, color, size, quantity } = body;
+    const qty = Math.max(1, parseInt(quantity, 10) || 1);
+    if (productId) {
+        const p = products.find(pp => pp.id === productId);
+        if (!p) return { error: 'Product not found.' };
+        return { item: { id: p.id, name: p.name, price: parseFloat(p.price) || 0, quantity: qty, color: color || '', size: size || '' } };
+    }
+    if (!name || !String(name).trim()) return { error: 'Item name is required.' };
+    return { item: { id: null, name: String(name).trim(), price: parseFloat(price) || 0, quantity: qty, color: color || '', size: size || '' } };
+}
+
+// PATCH: Add an item to an order the customer wants more of
+app.patch('/api/orders/:id/items/add', requireAdminJWT, (req, res) => {
+    const order = orders.find(o => o.id === req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    const built = buildOrderLineItem(req.body);
+    if (built.error) return res.status(400).json({ success: false, message: built.error });
+    const item = built.item;
+    if (item.id) {
+        const stockError = validateCartStock([{ id: item.id, color: item.color, size: item.size, quantity: item.quantity }]);
+        if (stockError) return res.status(400).json({ success: false, message: stockError });
+    }
+    order.items = order.items || [];
+    order.items.push(item);
+    recalcOrderTotal(order);
+    const editedBy = req.adminUsername || req.adminUser?.username || 'admin';
+    logItemEdit(order, { type: 'add', item: { name: item.name, color: item.color, size: item.size, quantity: item.quantity }, editedBy });
+    if (order.stockDeducted && item.id) {
+        deductStock([{ id: item.id, color: item.color, size: item.size, quantity: item.quantity }], order.stockPool);
+        saveJSON(PRODUCTS_FILE, products);
+    }
+    saveJSON(ORDERS_FILE, orders);
+    res.json({ success: true, order });
+});
+
+// PATCH: Swap one line on an order for a different product/colour/size/quantity
+app.patch('/api/orders/:id/items/change', requireAdminJWT, (req, res) => {
+    const order = orders.find(o => o.id === req.params.id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    const idx = parseInt(req.body.index, 10);
+    if (!order.items || isNaN(idx) || !order.items[idx]) return res.status(400).json({ success: false, message: 'That item is not on this order.' });
+    const oldItem = order.items[idx];
+    const built = buildOrderLineItem(req.body);
+    if (built.error) return res.status(400).json({ success: false, message: built.error });
+    const newItem = built.item;
+    if (newItem.id) {
+        const stockError = validateCartStock([{ id: newItem.id, color: newItem.color, size: newItem.size, quantity: newItem.quantity }]);
+        if (stockError) return res.status(400).json({ success: false, message: stockError });
+    }
+    order.items[idx] = newItem;
+    recalcOrderTotal(order);
+    const editedBy = req.adminUsername || req.adminUser?.username || 'admin';
+    logItemEdit(order, {
+        type: 'change',
+        from: { name: oldItem.name, color: oldItem.color, size: oldItem.size, quantity: oldItem.quantity },
+        to:   { name: newItem.name, color: newItem.color, size: newItem.size, quantity: newItem.quantity },
+        editedBy
+    });
+    if (order.stockDeducted) {
+        if (oldItem.id) restoreStock([{ id: oldItem.id, color: oldItem.color, size: oldItem.size, quantity: oldItem.quantity }], 'item changed', order.orderNo ? '#' + order.orderNo : order.id, order.stockPool);
+        if (newItem.id) deductStock([{ id: newItem.id, color: newItem.color, size: newItem.size, quantity: newItem.quantity }], order.stockPool);
+        saveJSON(PRODUCTS_FILE, products);
+    }
+    saveJSON(ORDERS_FILE, orders);
+    res.json({ success: true, order });
+});
+
 // POST: Bulk status update
 app.post('/api/orders/bulk-status', requireAdminJWT, (req, res) => {
-    const { ids, status } = req.body;
+    const { ids, status, pool } = req.body;
     const valid = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Returned', 'Refunded'];
     if (!Array.isArray(ids) || !valid.includes(status))
         return res.status(400).json({ success: false, message: 'ids array and valid status required.' });
+    const chosenPool = pool === 'dome' ? 'dome' : 'spintex';
     let updated = 0;
     ids.forEach(id => {
         const order = orders.find(o => o.id === id);
         if (!order) return;
         order.status = status;
         if ((status === 'Shipped' || status === 'Delivered') && !order.stockDeducted) {
-            deductStock((order.items || []).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: parseInt(i.quantity, 10) || 1 })));
+            deductStock((order.items || []).map(i => ({ id: i.id, color: i.color, size: i.size, quantity: parseInt(i.quantity, 10) || 1 })), chosenPool);
             order.stockDeducted = true;
+            order.stockPool = chosenPool;
         }
         updated++;
     });
@@ -2177,7 +2277,7 @@ app.patch('/api/orders/:id/return', requireAdminJWT, (req, res) => {
     // stockRestored so marking Returned then Refunded on the same order (or any
     // other double-call) doesn't restore the same units twice.
     if (order.stockDeducted && !order.stockRestored) {
-        restoreStock(order.items, status.toLowerCase(), order.orderNo ? '#' + order.orderNo : order.id);
+        restoreStock(order.items, status.toLowerCase(), order.orderNo ? '#' + order.orderNo : order.id, order.stockPool);
         order.stockRestored = true;
     }
     saveJSON(ORDERS_FILE, orders);
@@ -2563,7 +2663,7 @@ app.post('/api/admin/test-email', requireAdminJWT, requireManagerOrOwner, async 
 });
 
 app.put('/api/settings', requireAdminJWT, requireManagerOrOwner, (req, res) => {
-    let allowed = ['storeName','announcement','announcementOn','whatsapp','instagram','facebook','tiktok','snapchat','storeEmail','shopOpen','shopClosedMsg','heroPill','heroHeadline','heroSub','aboutHeading','aboutBody','footerTagline','trustLine1','trustLine2','trustLine3','trustLine4','freeDeliveryThreshold','freeDeliveryZone','featuredBannerEnabled','featuredBannerHeadline','featuredBannerSub','featuredBannerCta','featuredBannerLink','saleEnabled','saleEndDate','saleMessage','brandVideoUrl','brandVideoTitle','heroVideoEnabled','seoTitle','seoDescription','accentColor','fontBody','stockAlertEnabled','stockAlertThreshold','ownerEmail','ownerPhone','backupEnabled','invoiceAccountName','invoiceAccountNo','minOrderAmount','invoiceTin'];
+    let allowed = ['storeName','announcement','announcementOn','whatsapp','instagram','facebook','tiktok','snapchat','storeEmail','shopOpen','shopClosedMsg','heroPill','heroHeadline','heroSub','aboutHeading','aboutBody','footerTagline','trustLine1','trustLine3','trustLine4','freeDeliveryThreshold','freeDeliveryZone','featuredBannerEnabled','featuredBannerHeadline','featuredBannerSub','featuredBannerCta','featuredBannerLink','saleEnabled','saleEndDate','saleMessage','brandVideoUrl','brandVideoTitle','heroVideoEnabled','seoTitle','seoDescription','accentColor','fontBody','stockAlertEnabled','stockAlertThreshold','ownerEmail','ownerPhone','backupEnabled','invoiceAccountName','invoiceAccountNo','minOrderAmount','invoiceTin'];
     // Bank account fields are owner-only — GET /api/admin/settings no longer sends
     // their real values to a manager/staff session, so a save from that session
     // would otherwise overwrite the real numbers with blanks.
@@ -2589,7 +2689,7 @@ app.get('/api/stock-intakes', requireAdminJWT, (req, res) => res.json(intakes));
 app.post('/api/stock-intakes', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const { supplier, date, notes, lines } = req.body;
     if (!Array.isArray(lines) || !lines.length) return res.status(400).json({ success: false, message: 'No intake lines provided.' });
-    if (stockMod && lines.some(l => l && stockMod.isLocked(l.productId))) return res.status(409).json({ success: false, message: 'Some of these products are tracked by size. Record the delivery in Supply > Stock > Receive delivery instead.' });
+    if (stockMod && lines.some(l => l && stockMod.isLocked(l.productId))) return res.status(409).json({ success: false, message: 'Some of these products are tracked by size. Record the delivery in Admin > Stock > Receive delivery instead.' });
     const intake = { id: 'si-' + Date.now(), supplier: supplier || '', date: date || new Date().toISOString(), notes: notes || '', lines, createdAt: Date.now(), createdBy: req.adminUsername || 'admin' };
     // Apply stock increases to products
     lines.forEach(line => {
@@ -2676,7 +2776,7 @@ app.delete('/api/inventory/meta/:productId', requireAdminJWT, requireManagerOrOw
 app.patch('/api/products/:id/variant-stock', requireAdminJWT, requireManagerOrOwner, (req, res) => {
     const p = products.find(p => p.id === req.params.id);
     if (!p) return res.status(404).json({ success: false, message: 'Product not found.' });
-    if (stockMod && stockMod.isLocked(p.id)) return res.status(409).json({ success: false, message: 'Stock for this product is tracked by size. Change it in Supply > Stock (Receive delivery, Move stock or Count stock).' });
+    if (stockMod && stockMod.isLocked(p.id)) return res.status(409).json({ success: false, message: 'Stock for this product is tracked by size. Use Receive delivery / Move / Count in Admin > Stock.' });
     const { variant, qty, reason } = req.body;
     if (!variant) return res.status(400).json({ success: false, message: 'variant required.' });
     const newQty = qty === null || qty === '' ? 0 : parseInt(qty) || 0;
@@ -2746,6 +2846,9 @@ app.post('/api/products/:id/duplicate', requireAdminJWT, requireManagerOrOwner, 
         id: Date.now().toString(),
         name: orig.name + ' (Copy)',
         isSoldOut: false,
+        // A duplicate starts unlisted — it's a draft to edit (new colour, variant, etc.) before it
+        // goes live, not a second live listing of the same product appearing on the storefront.
+        isListed: false,
         createdAt: Date.now(),
         updatedAt: undefined,
         history: [],
@@ -3065,7 +3168,7 @@ app.get('/api/customers/:id/orders', requireAdminJWT, requireManagerOrOwner, (re
 // ── ORDER STATUS ───────────────────────────────────────────────────────────
 
 app.patch('/api/orders/:id/status', requireAdminJWT, (req, res) => {
-    const { status, shippingCarrier, shippingRiderPhone, shippingTrackingLink, shippingNote } = req.body;
+    const { status, shippingCarrier, shippingRiderPhone, shippingTrackingLink, shippingNote, pool } = req.body;
     const valid = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Returned', 'Refunded'];
     if (!valid.includes(status)) return res.status(400).json({ success: false, message: 'Invalid status.' });
     const order = orders.find(o => o.id === req.params.id);
@@ -3082,12 +3185,15 @@ app.patch('/api/orders/:id/status', requireAdminJWT, (req, res) => {
         order.shippedBy = req.adminUsername || 'admin';
         order.shippedAt = new Date().toISOString();
     }
-    // Auto-deduct stock when order first reaches Shipped or Delivered
-    // Set flag AFTER deduction so a write failure doesn't permanently skip deduction
+    // Stock is deducted here, not at checkout — this is the first point staff actively confirms
+    // the order, and picks which pool it's fulfilled from (Dome or Spintex, Spintex by default).
+    // Set flag AFTER deduction so a write failure doesn't permanently skip deduction.
     if ((status === 'Shipped' || status === 'Delivered') && !order.stockDeducted) {
-        deductStock((order.items || []).map(item => ({ id: item.id, color: item.color, size: item.size, quantity: parseInt(item.quantity, 10) || 1 })));
+        const chosenPool = pool === 'dome' ? 'dome' : 'spintex';
+        deductStock((order.items || []).map(item => ({ id: item.id, color: item.color, size: item.size, quantity: parseInt(item.quantity, 10) || 1 })), chosenPool);
         saveJSON(PRODUCTS_FILE, products);
         order.stockDeducted = true;
+        order.stockPool = chosenPool;
     }
     saveJSON(ORDERS_FILE, orders);
     if (status === 'Shipped' || status === 'Delivered') {
@@ -3142,7 +3248,7 @@ app.delete('/api/orders/:id', requireAdminJWT, requireManagerOrOwner, async (req
     // before, so removing an order (e.g. a duplicate or a test order) left
     // inventory permanently short by whatever it had deducted at checkout.
     if (order.stockDeducted && !order.stockRestored) {
-        restoreStock(order.items, 'order deleted', order.orderNo ? '#' + order.orderNo : order.id);
+        restoreStock(order.items, 'order deleted', order.orderNo ? '#' + order.orderNo : order.id, order.stockPool);
     }
     // Delete the order first — email is secondary and must never block deletion
     orders.splice(idx, 1);

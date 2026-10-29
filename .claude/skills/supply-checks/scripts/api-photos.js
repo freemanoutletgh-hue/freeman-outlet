@@ -19,41 +19,53 @@ async function call(method, url, token, body, fresh, raw) {
   r = await call('POST', '/api/admin/accounts', owner, { username: 'clerk', password: 'ClerkPass-12345', name: 'Clerk', role: 'staff' });
   const viewer = await login('boss', 'BossPass-12345'), staff = await login('clerk', 'ClerkPass-12345');
   const ST = async () => (await call('GET', '/api/supply/stock', owner)).body;
-  const online = async (pid, c, s) => (await ST()).products.find(p => p.id === pid).skus[c + '|' + s].online;
+  const spintexOf = async (pid, c, s) => (await ST()).products.find(p => p.id === pid).skus[c + '|' + s].spintex;
   await call('PUT', '/api/supply/prices', owner, { standardPrice: 250.2 });
 
-  // stock: rich product, Black M 5 / L 2 online
+  // stock: rich product, Black M 5 / L 2 spintex
   await call('POST', '/api/supply/stock/intake', owner, { lines: [{ productId: 'p-rich', colour: 'Black', size: 'M', received: 10 }, { productId: 'p-rich', colour: 'Black', size: 'L', received: 4 }, { productId: 'p-rich', colour: 'White', size: 'M', received: 10 }] });
-  await call('POST', '/api/supply/stock/transfer', owner, { from: 'dome', to: 'online', lines: [{ productId: 'p-rich', colour: 'Black', size: 'M', packs: 5 }, { productId: 'p-rich', colour: 'Black', size: 'L', packs: 2 }, { productId: 'p-rich', colour: 'White', size: 'M', packs: 4 }] });
+  await call('POST', '/api/supply/stock/transfer', owner, { lines: [{ productId: 'p-rich', colour: 'Black', size: 'M', packs: 5 }, { productId: 'p-rich', colour: 'Black', size: 'L', packs: 2 }, { productId: 'p-rich', colour: 'White', size: 'M', packs: 4 }] });
   r = await call('PUT', '/api/supply/stock/tracking', owner, { on: true, confirm: true }); ok(r.body.success, 'tracking on');
 
   // ── manual invoices ───────────────────────────────────────────────────────
   const inv = (item) => call('POST', '/api/admin/manual-invoice', owner, { customer: { name: 'Walk in', phone: '0200000000' }, items: [item], mode: 'save' });
-  let b = await online('p-rich', 'Black', 'M');
+  // Manual invoices no longer deduct at save either (Phase 3: deduction waits for staff to confirm
+  // Shipped/Delivered in Sales and pick a pool) — ship it first, then check the deduction.
+  const ship = (orderId, pool = 'spintex') => call('PATCH', '/api/orders/' + orderId + '/status', owner, { status: 'Shipped', pool });
+  let b = await spintexOf('p-rich', 'Black', 'M');
   r = await inv({ productId: 'p-rich', description: 'Black M', price: 250, qty: 2, color: 'Black', size: 'M' }); ok(r.body.success, 'manual invoice with size', r.body);
-  ok((await online('p-rich', 'Black', 'M')) === b - 2, 'manual invoice deducts the exact size');
+  ok(r.body.order.stockDeducted === false, 'manual invoice not deducted at save (deferred)', r.body.order.stockDeducted);
+  let shipR = await ship(r.body.order.id); ok(shipR.body.success, 'ship manual invoice (with size)', shipR.body);
+  ok((await spintexOf('p-rich', 'Black', 'M')) === b - 2, 'manual invoice deducts the exact size once shipped');
   // no size given: takes from the size with most stock for that colour (Black M has 3 now, L has 2)
-  b = [await online('p-rich', 'Black', 'M'), await online('p-rich', 'Black', 'L')];
+  b = [await spintexOf('p-rich', 'Black', 'M'), await spintexOf('p-rich', 'Black', 'L')];
   r = await inv({ productId: 'p-rich', description: 'Black any size', price: 250, qty: 1, color: 'Black', size: '' }); ok(r.body.success, 'manual invoice without size', r.body);
-  const a2 = [await online('p-rich', 'Black', 'M'), await online('p-rich', 'Black', 'L')]; ok(a2[0] + a2[1] === b[0] + b[1] - 1, 'no-size invoice deducts exactly one pack in total', [b, a2]);
+  shipR = await ship(r.body.order.id); ok(shipR.body.success, 'ship manual invoice (no size)', shipR.body);
+  const a2 = [await spintexOf('p-rich', 'Black', 'M'), await spintexOf('p-rich', 'Black', 'L')]; ok(a2[0] + a2[1] === b[0] + b[1] - 1, 'no-size invoice deducts exactly one pack in total once shipped', [b, a2]);
   // custom line (no productId) must not touch stock
   const tot = JSON.stringify((await ST()).totals); r = await inv({ description: 'Delivery bag', price: 5, qty: 1 }); ok(r.body.success && JSON.stringify((await ST()).totals) === tot, 'custom line leaves stock alone', r.body);
-  // manual invoice for more than online has
-  const lb = await online('p-rich', 'Black', 'L'); r = await inv({ productId: 'p-rich', description: 'too many', price: 250, qty: lb + 3, color: 'Black', size: 'L' });
-  console.log('manual oversell ->', r.status, JSON.stringify(r.body).slice(0, 160)); ok(r.status === 400 || (await online('p-rich', 'Black', 'L')) === lb, 'manual oversell is blocked or leaves stock untouched');
-  ok((await online('p-rich', 'Black', 'L')) >= 0, 'never negative');
+  // manual invoice for more than spintex has
+  const lb = await spintexOf('p-rich', 'Black', 'L'); r = await inv({ productId: 'p-rich', description: 'too many', price: 250, qty: lb + 3, color: 'Black', size: 'L' });
+  console.log('manual oversell ->', r.status, JSON.stringify(r.body).slice(0, 160)); ok(r.status === 400 || (await spintexOf('p-rich', 'Black', 'L')) === lb, 'manual oversell is blocked or leaves stock untouched');
+  ok((await spintexOf('p-rich', 'Black', 'L')) >= 0, 'never negative');
 
-  // ── flagged order (oversold) shipped later: pool clamps at 0, shortage logged ──
+  // ── flagged order (oversold beyond Dome + Spintex combined) shipped later: deduction is deferred
+  // AND, once Sales picks a pool at confirmation, only that one pool is touched — a shortfall there
+  // is logged for staff to see (and move more from Dome themselves), never auto-spilled into Dome ──
   const order = (items) => call('POST', '/api/whatsapp-order', null, { customer: { name: 'Ama', phone: '0242222222' }, cartItems: items, deliveryZone: 'Accra', deliveryAddress: 'Tema' }, true);
-  const wl = await online('p-rich', 'White', 'M');
-  r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: wl + 2, color: 'White', size: 'M' }]);
-  const flagged = r.body.order; ok(flagged && flagged.status === 'Needs Review', 'oversold order is flagged Needs Review', flagged && flagged.status);
-  ok((await online('p-rich', 'White', 'M')) === wl, 'flagged order deducted nothing');
-  r = await call('PATCH', '/api/orders/' + flagged.id + '/status', owner, { status: 'Shipped' }); ok(r.body.success, 'ship flagged order', r.body);
-  ok((await online('p-rich', 'White', 'M')) === 0, 'shipping clamps the pool at zero, not negative', await online('p-rich', 'White', 'M'));
-  const mv = (await call('GET', '/api/supply/stock/movements?limit=50', owner)).body; ok(mv.some(m => m.type === 'online-short'), 'shortage is logged for a recount', mv.map(m => m.type));
+  const domeOf = async (pid, c, s) => (await ST()).products.find(p => p.id === pid).skus[c + '|' + s].dome;
+  const wl = await spintexOf('p-rich', 'White', 'M'), wd = await domeOf('p-rich', 'White', 'M'); // White M: 4 spintex, 6 dome (combined 10)
+  r = await order([{ id: 'p-rich', name: 'x', price: 260, quantity: wl + wd + 2, color: 'White', size: 'M' }]);
+  const flagged = r.body.order; ok(flagged && flagged.status === 'Needs Review', 'oversold order (beyond combined) is flagged Needs Review', flagged && flagged.status);
+  ok((await spintexOf('p-rich', 'White', 'M')) === wl && (await domeOf('p-rich', 'White', 'M')) === wd, 'flagged order deducted nothing from either pool');
+  r = await call('PATCH', '/api/orders/' + flagged.id + '/status', owner, { status: 'Shipped', pool: 'spintex' }); ok(r.body.success, 'ship flagged order (confirmed from Spintex)', r.body);
+  ok((await spintexOf('p-rich', 'White', 'M')) === 0, 'Spintex is clamped at zero, never negative', await spintexOf('p-rich', 'White', 'M'));
+  ok((await domeOf('p-rich', 'White', 'M')) === wd, 'Dome is untouched — staff picked Spintex, so only Spintex is drawn from', await domeOf('p-rich', 'White', 'M'));
+  const mv = (await call('GET', '/api/supply/stock/movements?limit=50', owner)).body; ok(mv.some(m => m.type === 'spintex-short'), 'shortage beyond what Spintex had is logged for staff to notice', mv.map(m => m.type));
   r = await call('PATCH', '/api/orders/' + flagged.id + '/return', owner, { status: 'Returned', returnReason: 'x' });
-  ok((await online('p-rich', 'White', 'M')) === wl + 2, 'returning the oversold order restores its full quantity (pool 4? or 2+...)', await online('p-rich', 'White', 'M'));
+  // a return restores the full ORIGINAL order quantity (not just what was actually taken), into the
+  // same pool it was confirmed from (Spintex here) — it doesn't try to track the clamped shortfall
+  ok((await spintexOf('p-rich', 'White', 'M')) === wl + wd + 2, 'returning the oversold order restores its full original quantity, into the pool it was confirmed from', await spintexOf('p-rich', 'White', 'M'));
 
   // ── cheque photo privacy ──────────────────────────────────────────────────
   r = await call('POST', '/api/supply/shops', owner, { name: 'Photo Shop', termsDays: 30 }); const shop = r.body.shop;

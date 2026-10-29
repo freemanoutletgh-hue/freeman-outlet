@@ -76,6 +76,7 @@ module.exports = function registerSupply({ app, requireAdminJWT, requireManagerO
     const vPayments = () => payments.filter(live);
     const vCheques = () => cheques.filter(live);
     const vCalls = () => calls.filter(live);
+    const vVisits = () => visits.filter(live);
     const shopOf = id => shops.find(s => s.id === id);
     const supplyOf = id => supplies.find(s => s.id === id);
     const isSupply = s => !s.kind || s.kind === 'supply';
@@ -584,6 +585,17 @@ module.exports = function registerSupply({ app, requireAdminJWT, requireManagerO
             .map(x => ({ productId: String(x.productId), colour: cleanText(x.colour, 40), size: cleanText(x.size, 20), has: Number(x.has) }));
         const v = tag({ id: uid('vis'), shopId: shop.id, shopName: shop.name, date, shelf, notes: cleanText(req.body.notes, 300), createdAt: Date.now(), createdBy: by(req) });
         visits.push(v); save.visits(); res.json({ success: true, visit: v });
+    });
+
+    // The two most recent recorded shelf checks for a shop (from a supply/swap/credit record or a
+    // shelf-only visit — whichever has shelf data), newest first. Used by the shelf-check step of a
+    // new visit to flag items whose shelf quantity isn't moving across those two visits.
+    app.get('/api/supply/shops/:id/recent-shelf', read, (req, res) => {
+        const shop = shopOf(req.params.id); if (!shop) return fail(res, 404, 'Shop not found.');
+        const records = vSupplies().filter(s => s.shopId === shop.id && Array.isArray(s.shelf) && s.shelf.length).map(s => ({ date: s.date, createdAt: s.createdAt, shelf: s.shelf }))
+            .concat(vVisits().filter(v => v.shopId === shop.id && Array.isArray(v.shelf) && v.shelf.length).map(v => ({ date: v.date, createdAt: v.createdAt, shelf: v.shelf })))
+            .sort((a, b) => (b.date === a.date ? b.createdAt - a.createdAt : b.date.localeCompare(a.date)));
+        res.json(records.slice(0, 2));
     });
 
     // ── TO DO (everything that needs the owner's attention) ───────────────────
