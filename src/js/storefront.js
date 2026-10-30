@@ -1617,13 +1617,16 @@
     [['trustLine1',1], ['trustLine3',3], ['trustLine4',4]].forEach(function(pair){
       if (s[pair[0]]) setHtml('trust-' + pair[1], s[pair[0]]);
     });
+    var fdZone = s.freeDeliveryZone || FD_ZONE, fdThreshold = s.freeDeliveryThreshold != null ? (parseFloat(s.freeDeliveryThreshold) || 0) : FD_THRESHOLD;
     var trust2 = $id('trust-2');
     if (trust2) {
-      var fdZone = s.freeDeliveryZone || FD_ZONE, fdThreshold = s.freeDeliveryThreshold != null ? (parseFloat(s.freeDeliveryThreshold) || 0) : FD_THRESHOLD;
       trust2.innerHTML = fdThreshold > 0
         ? 'Free delivery in <strong>' + escHtml(fdZone) + '</strong> on orders over <strong>GH&#8373;' + fdThreshold + '</strong>'
         : 'Fast, reliable delivery nationwide';
     }
+    // Delivery & Returns panel — same live threshold, not separate hardcoded text that can drift from it
+    var delFree = $id('del-free');
+    if (delFree) delFree.textContent = fdThreshold > 0 ? ('Free on orders over GH₵' + fdThreshold) : 'Delivery fee confirmed via WhatsApp';
 
     // Announcement banner
     var bar = document.getElementById('announce-bar');
